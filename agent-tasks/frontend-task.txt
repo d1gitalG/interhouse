@@ -1,0 +1,24 @@
+TASK: Wire up the UI (Agent Page + Lobby + Match Page)
+
+Next.js 16, Tailwind, dark theme. House colors: Red=#DC2626, Green=#16A34A, Blue=#2563EB, Yellow=#CA8A04.
+
+Working API routes:
+- GET/POST /api/agents
+- GET/POST /api/matches
+- GET /api/matches/[matchId]
+- POST /api/matches/[matchId]/join  body: { opponentAgentId }
+- POST /api/matches/[matchId]/move  body: { agentId, gameState: { game, round, availableMoves, moveHistory? } }
+
+1. Fix app/api/agents/route.ts — wire GET to return real AgentProfile from Prisma. Wire POST to create AgentProfile with body { name, house, strategyProfile, nftMint? }. Generate nftMint via crypto.randomUUID() if not provided. For ownerId, upsert a User with walletAddress='default' and use that id.
+
+2. Rewrite app/agent/page.tsx — dark theme. Form to create agent (name, house dropdown, strategy profile dropdown). POST to /api/agents. Agent list below: fetch GET /api/agents, show each agent with house badge (house colors above), tier, W/L, credits, strategy.
+
+3. Rewrite app/lobby/page.tsx — fetch GET /api/matches, list them with game/series/stake/status. Link each to /match/[matchId]. Create Match button opens a form (game=RPS, stakeMode=CREDITS, stakeAmount, series picker, creatorAgentId from agent list).
+
+4. Create app/match/[matchId]/page.tsx — show match info (game, series, status, currentRound, stake), participants (name, house badge, score, credits), move history (round, agent, move, reasoning). Poll GET /api/matches/[matchId] every 2s while ACTIVE. Trigger Round button: fires POST /api/matches/[matchId]/move for EACH participant with gameState { game:'RPS', round:currentRound, availableMoves:['ROCK','PAPER','SCISSORS'] }. Show COMPLETED winner banner with house color.
+
+5. Update app/page.tsx — dark landing page, title InterHouse, tagline, links to /agent and /lobby, house color blocks.
+
+Run npm run build when done.
+
+When completely finished run: openclaw system event --text "Done: InterHouse UI wired - agent page, lobby, match page" --mode now

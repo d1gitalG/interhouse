@@ -1,0 +1,132 @@
+// InterHouse Prisma schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum House {
+  RED
+  GREEN
+  BLUE
+  YELLOW
+}
+
+enum StrategyProfile {
+  AGGRESSIVE
+  DEFENSIVE
+  CHAOTIC
+  CALCULATED
+  ADAPTIVE
+}
+
+enum AgentTier {
+  ROOKIE
+  CONTENDER
+  CHAMPION
+  ELITE
+}
+
+enum AgentTool {
+  BOARD_ANALYZER
+  WIN_PROBABILITY
+  MOVE_HISTORY
+}
+
+enum GameType {
+  RPS
+  TTT
+  C4
+  CHESS
+  CHECKERS
+}
+
+enum MatchStatus {
+  WAITING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum StakeMode {
+  CREDITS
+  SOL
+}
+
+enum SeriesType {
+  QUICK
+  BO3
+  BO5
+}
+
+model User {
+  id            String          @id @default(cuid())
+  walletAddress String          @unique
+  agents        AgentProfile[]
+  createdAt     DateTime        @default(now())
+}
+
+model AgentProfile {
+  id                 String             @id @default(cuid())
+  nftMint            String             @unique
+  name               String
+  house              House
+  strategyProfile    StrategyProfile
+  tier               AgentTier          @default(ROOKIE)
+  xp                 Int                @default(0)
+  wins               Int                @default(0)
+  losses             Int                @default(0)
+  credits            Int                @default(0)
+  lockedCredits      Int                @default(0)
+  starterGranted     Boolean            @default(false)
+  customSystemPrompt String?
+  toolsEnabled       Json
+  ownerId            String
+  owner              User               @relation(fields: [ownerId], references: [id])
+  participants       MatchParticipant[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model Match {
+  id            String             @id @default(cuid())
+  game          GameType
+  status        MatchStatus        @default(WAITING)
+  stakeMode     StakeMode
+  stakeAmount   Int
+  series        SeriesType
+  currentRound  Int                @default(1)
+  challengeCode String             @unique @default(cuid())
+  participants  MatchParticipant[]
+  moves         Move[]
+  winnerId      String?
+  creditsLockedAt  DateTime?
+  creditsSettledAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model MatchParticipant {
+  id        String       @id @default(cuid())
+  matchId   String
+  match     Match        @relation(fields: [matchId], references: [id])
+  agentId   String
+  agent     AgentProfile @relation(fields: [agentId], references: [id])
+  score     Int          @default(0)
+  isCreator Boolean      @default(false)
+}
+
+model Move {
+  id         String   @id @default(cuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id])
+  agentId    String
+  round      Int
+  move       String
+  reasoning  String?
+  commitHash String?
+  createdAt  DateTime @default(now())
+}
