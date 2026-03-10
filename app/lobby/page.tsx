@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 type Match = {
   id: string;
@@ -19,9 +20,11 @@ type Agent = {
 };
 
 export default function LobbyPage() {
+  const router = useRouter();
   const [matches, setMatches] = useState<Match[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [game, setGame] = useState<"RPS" | "TTT">("RPS");
   const [stakeAmount, setStakeAmount] = useState(100);
   const [series, setSeries] = useState<"QUICK" | "BO3" | "BO5">("QUICK");
   const [creatorAgentId, setCreatorAgentId] = useState("");
@@ -29,7 +32,7 @@ export default function LobbyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setError(null);
     try {
       const [matchesRes, agentsRes] = await Promise.all([
@@ -54,11 +57,11 @@ export default function LobbyPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [creatorAgentId]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   const onCreateMatch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,7 +73,7 @@ export default function LobbyPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          game: "RPS",
+          game,
           stakeMode: "CREDITS",
           stakeAmount: Number(stakeAmount),
           series,
@@ -78,11 +81,16 @@ export default function LobbyPage() {
         }),
       });
 
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; match?: { id: string } };
       if (!res.ok) throw new Error(data.error ?? "Failed to create match");
 
-      setShowCreateForm(false);
       await loadData();
+      if (data.match?.id) {
+        router.push(`/match/${data.match.id}`);
+        return;
+      }
+
+      setShowCreateForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create match");
     } finally {
@@ -111,11 +119,14 @@ export default function LobbyPage() {
             <form className="grid gap-4 md:grid-cols-4" onSubmit={onCreateMatch}>
               <label className="grid gap-2 text-sm">
                 Game
-                <input
-                  disabled
-                  value="RPS"
-                  className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-400"
-                />
+                <select
+                  value={game}
+                  onChange={(e) => setGame(e.target.value as "RPS" | "TTT")}
+                  className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
+                >
+                  <option value="RPS">RPS</option>
+                  <option value="TTT">TTT</option>
+                </select>
               </label>
 
               <label className="grid gap-2 text-sm">

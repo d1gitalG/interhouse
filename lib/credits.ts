@@ -2,8 +2,6 @@ import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-type CreditsDb = Prisma.TransactionClient | typeof prisma;
-
 export const STARTER_CREDITS_GRANT = 1000; // TODO: move to config/env.
 
 export async function getCredits(agentId: string): Promise<number> {
@@ -209,4 +207,3 @@ export async function settleLockedMatchStakeCredits(params: {
   });
   if (winnerSettle.count !== 1) throw new Error("STAKE_LOCK_CORRUPT");
 }
-

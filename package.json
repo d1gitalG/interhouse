@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "smoke:phase0": "powershell -ExecutionPolicy Bypass -File scripts/smoke-phase0.ps1",
+    "smoke:core": "powershell -ExecutionPolicy Bypass -File scripts/smoke-core-flow.ps1",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio"
