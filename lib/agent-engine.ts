@@ -75,6 +75,25 @@ function pickDeterministicFallbackMove(gameState: GameState, config: AgentConfig
   return options[hash % options.length] ?? options[0] ?? "ROCK";
 }
 
+function normalizeParsedMove(rawMove: unknown): string | null {
+  if (typeof rawMove === "string") {
+    return rawMove.trim();
+  }
+
+  if (
+    typeof rawMove === "object" &&
+    rawMove !== null &&
+    "row" in rawMove &&
+    "col" in rawMove &&
+    typeof rawMove.row === "number" &&
+    typeof rawMove.col === "number"
+  ) {
+    return `${rawMove.row},${rawMove.col}`;
+  }
+
+  return null;
+}
+
 function parseAgentJson(text: string): { move: string; reasoning: string } {
   let raw = text.trim();
 
@@ -92,9 +111,10 @@ function parseAgentJson(text: string): { move: string; reasoning: string } {
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate) as { move?: unknown; reasoning?: unknown };
-      if (typeof parsed.move !== "string") continue;
+      const move = normalizeParsedMove(parsed.move);
+      if (!move) continue;
       return {
-        move: parsed.move,
+        move,
         reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "No reasoning provided.",
       };
     } catch {
@@ -201,9 +221,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
   }
 
   const systemPrompt = buildSystemPrompt(config);
+  const tttHint =
+    gameState.game === "TTT"
+      ? "\nFor TTT, set move as coordinates like \"1,2\" or an object like {\"row\":1,\"col\":2}."
+      : "";
   const userMessage = `Game: ${gameState.game} | Round: ${gameState.round}
 Available moves: ${gameState.availableMoves.join(", ")}${toolContext}
-Make your move.`;
+Make your move.${tttHint}`;
 
   try {
     // Prefer Gemini when key is available (your current setup), fallback to Anthropic.
