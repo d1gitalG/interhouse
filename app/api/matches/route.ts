@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { assertAgentHasCredits, ensureStarterCredits, lockMatchStakeCredits } from "@/lib/credits";
@@ -17,17 +18,81 @@ const CreateMatchSchema = z.object({
   opponentAgentId: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const game = searchParams.get("game");
+  const status = searchParams.get("status");
+  const agentId = searchParams.get("agentId");
+  const house = searchParams.get("house");
+  const sort = searchParams.get("sort");
+
+  const where: any = {};
+  if (game) {
+    where.game = game;
+  }
+  if (status) {
+    where.status = status;
+  }
+  if (agentId) {
+    where.participants = {
+      some: {
+        agentId: agentId,
+      },
+    };
+  }
+  if (house) {
+    where.participants = {
+      some: {
+        agent: {
+          house: house,
+        },
+      },
+    };
+  }
+
+  const sortMode =
+    sort === "oldest" || sort === "credits_won" || sort === "series_type" || sort === "newest" ? sort : "newest";
+
   const matches = await prisma.match.findMany({
+    where,
     include: {
       participants: { include: { agent: true } },
       moves: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 200,
   });
 
-  return NextResponse.json({ matches });
+  const seriesRank: Record<"QUICK" | "BO3" | "BO5", number> = {
+    QUICK: 0,
+    BO3: 1,
+    BO5: 2,
+  };
+
+  const creditsWon = (match: { status: string; stakeMode: string; stakeAmount: number }) =>
+    match.status === "COMPLETED" && match.stakeMode === "CREDITS" ? match.stakeAmount * 2 : 0;
+
+  const sortedMatches = [...matches].sort((a, b) => {
+    switch (sortMode) {
+      case "oldest":
+        return (a.createdAt?.toISOString() ?? "").localeCompare(b.createdAt?.toISOString() ?? "");
+      case "credits_won": {
+        const delta = creditsWon(b) - creditsWon(a);
+        if (delta !== 0) return delta;
+        return (b.createdAt?.toISOString() ?? "").localeCompare(a.createdAt?.toISOString() ?? "");
+      }
+      case "series_type": {
+        const delta = seriesRank[a.series] - seriesRank[b.series];
+        if (delta !== 0) return delta;
+        return (b.createdAt?.toISOString() ?? "").localeCompare(a.createdAt?.toISOString() ?? "");
+      }
+      case "newest":
+      default:
+        return (b.createdAt?.toISOString() ?? "").localeCompare(a.createdAt?.toISOString() ?? "");
+    }
+  });
+
+  return NextResponse.json({ matches: sortedMatches.slice(0, 50) });
 }
 
 export async function POST(req: Request) {
@@ -71,6 +136,7 @@ export async function POST(req: Request) {
         data: {
           ...data,
           status: participants.length === 2 ? "ACTIVE" : "WAITING",
+          solEscrowAddress: data.stakeMode === "SOL" ? `mock-escrow-${Math.random().toString(36).substring(7)}` : null,
           participants: participants.length
             ? {
                 create: participants,

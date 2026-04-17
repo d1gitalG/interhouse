@@ -66,12 +66,13 @@ model User {
   id            String          @id @default(cuid())
   walletAddress String          @unique
   agents        AgentProfile[]
+  credits       Int             @default(0)
   createdAt     DateTime        @default(now())
 }
 
 model AgentProfile {
   id                 String             @id @default(cuid())
-  nftMint            String             @unique
+  nftMint            String?            @unique
   name               String
   house              House
   strategyProfile    StrategyProfile
@@ -96,7 +97,7 @@ model Match {
   game          GameType
   status        MatchStatus        @default(WAITING)
   stakeMode     StakeMode
-  stakeAmount   Int
+  stakeAmount   Float              @default(0)
   series        SeriesType
   currentRound  Int                @default(1)
   challengeCode String             @unique @default(cuid())
@@ -105,6 +106,8 @@ model Match {
   winnerId      String?
   creditsLockedAt  DateTime?
   creditsSettledAt DateTime?
+  solEscrowAddress String?
+  solSettledAt     DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }

@@ -1,0 +1,23 @@
+Implement IH-006 in C:/Users/ladit/.openclaw/workspace/interhouse.
+
+Task:
+Create Solana escrow / wallet connection stubs in the UI.
+
+Scope:
+- Update the match creation flow and match view UI so they visibly show wallet connection stubs.
+- Keep this as stub/demo UI only; do not add real wallet integration.
+- Follow the existing app style and keep changes bounded to this task.
+
+Definition of done:
+- CreateMatchForm shows a wallet connection stub section.
+- MatchView shows wallet/escrow stub state.
+- The app still builds cleanly.
+- Update QUEUE.md if IH-006 is completed.
+- Update STATUS.md if the next action changes.
+- Write a short note to C:/Users/ladit/.openclaw/workspace/memory/2026-03-16.md if meaningful progress is made.
+
+Verification:
+- Run the relevant build/test command and confirm success in your final summary.
+
+When completely finished, run this command to notify me:
+openclaw system event --text "Done: InterHouse IH-006 wallet/escrow UI stubs implemented and verified" --mode now

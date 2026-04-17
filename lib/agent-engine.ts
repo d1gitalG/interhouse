@@ -6,6 +6,7 @@ export interface GameState {
   board?: string[][] | null;
   moveHistory?: Array<{ agentId: string; move: string; round: number }>;
   availableMoves: string[];
+  resourceStatus?: string;
 }
 
 export interface AgentConfig {
@@ -40,11 +41,9 @@ const TOOLS_BY_TIER: Record<string, string[]> = {
 };
 
 function buildSystemPrompt(config: AgentConfig): string {
-  const base = `You are ${config.agentName}, an AI agent competing in the InterHouse battle arena for House ${config.house}.
-${STRATEGY_PROMPTS[config.strategyProfile]}
-You must respond with ONLY a JSON object: {"move": "<your move>", "reasoning": "<brief explanation>"}
-The move must be one of the available moves provided.`;
-  return config.customSystemPrompt ? `${base}\n\nCustom directive: ${config.customSystemPrompt}` : base;
+  const base = "You are " + config.agentName + ", an AI agent competing in the InterHouse battle arena for House " + config.house + ".\n" +
+STRATEGY_PROMPTS[config.strategyProfile] + "\nYou must respond with ONLY a JSON object: {\"move\": \"<your move>\", \"reasoning\": \"<brief explanation>\"}\nThe move must be one of the available moves provided. Note: You have a limited number of uses for each move type (Resource Exhaustion rule). Manage your resources wisely.";
+  return config.customSystemPrompt ? base + "\n\nCustom directive: " + config.customSystemPrompt : base;
 }
 
 function applyBoardAnalyzer(gameState: GameState): string {
@@ -148,12 +147,12 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<{ 
   const requestedModel = process.env.GEMINI_MODEL;
   const modelCandidates = requestedModel
     ? [requestedModel]
-    : ["gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+    : ["gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
   let lastError = "";
 
   for (const model of modelCandidates) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(apiKey);
 
     const response = await fetch(url, {
       method: "POST",
@@ -161,28 +160,23 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<{ 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
         contents: [
           {
             role: "user",
-            parts: [{ text: userMessage }],
+            parts: [{ text: systemPrompt + "\n\n" + userMessage }],
           },
         ],
         generationConfig: {
           temperature: 0.2,
           maxOutputTokens: 256,
-          responseMimeType: "application/json",
         },
       }),
     });
 
     if (!response.ok) {
       const err = await response.text().catch(() => "");
-      lastError = `GEMINI_REQUEST_FAILED:${response.status}:${err}`;
-      // Try next model only when model is unavailable.
-      if (response.status === 404) continue;
+      lastError = "GEMINI_REQUEST_FAILED:" + response.status + ":" + err;
+      if (response.status === 404 || err.includes("model is deprecated")) continue;
       throw new Error(lastError);
     }
 
@@ -192,7 +186,16 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<{ 
           parts?: Array<{ text?: string }>;
         };
       }>;
+      error?: {
+        message: string;
+        code: number;
+        status: string;
+      };
     };
+
+    if (data.error) {
+      throw new Error("GEMINI_API_ERROR:" + data.error.message);
+    }
 
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("\n") ?? "";
     return parseAgentJson(text);
@@ -225,13 +228,12 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
     gameState.game === "TTT"
       ? "\nFor TTT, set move as coordinates like \"1,2\" or an object like {\"row\":1,\"col\":2}."
       : "";
-  const userMessage = `Game: ${gameState.game} | Round: ${gameState.round}
-Available moves: ${gameState.availableMoves.join(", ")}${toolContext}
-Make your move.${tttHint}`;
+  const resourceMsg = gameState.resourceStatus ? `\n[RESOURCES] ${gameState.resourceStatus}` : "";
+  const userMessage = "Game: " + gameState.game + " | Round: " + gameState.round + "\nAvailable moves: " + gameState.availableMoves.join(", ") + resourceMsg + toolContext + "\nMake your move." + tttHint;
 
   try {
-    // Prefer Gemini when key is available (your current setup), fallback to Anthropic.
-    const parsed = process.env.GEMINI_API_KEY
+    const isGemini = !!process.env.GEMINI_API_KEY;
+    const parsed = isGemini
       ? await callGemini(systemPrompt, userMessage)
       : await callAnthropic(systemPrompt, userMessage);
 
@@ -241,12 +243,13 @@ Make your move.${tttHint}`;
       toolsUsed,
       thinkingMs: Date.now() - start,
     };
-  } catch {
-    // Resilience fallback: never hard-fail a match turn due to model/provider formatting issues.
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("[AGENT ENGINE ERROR]", errorMsg);
     const fallbackMove = pickDeterministicFallbackMove(gameState, config);
     return {
       move: fallbackMove,
-      reasoning: "Fallback move used due to provider response error.",
+      reasoning: "Fallback move used due to error: " + errorMsg,
       toolsUsed,
       thinkingMs: Date.now() - start,
     };

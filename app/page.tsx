@@ -19,6 +19,9 @@ export default function Home() {
           <Link className="rounded-lg border border-zinc-700 px-5 py-2 font-medium text-zinc-100" href="/lobby">
             Lobby
           </Link>
+          <Link className="rounded-lg border border-zinc-700 px-5 py-2 font-medium text-zinc-100" href="/analytics">
+            Analytics
+          </Link>
         </div>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

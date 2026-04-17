@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     create: { walletAddress: "default" },
   });
 
-  const agent = await prisma.$transaction(async (tx) => {
+  const agent = await prisma.$transaction(async (tx: any) => {
     const created = await tx.agentProfile.create({
       data: {
         name: parsed.data.name,

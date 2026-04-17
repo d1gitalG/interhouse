@@ -8,7 +8,18 @@ export async function GET(_req: Request, ctx: { params: Promise<{ matchId: strin
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
-      participants: { include: { agent: true } },
+      participants: { 
+        include: { 
+          agent: {
+            select: {
+              id: true,
+              name: true,
+              house: true,
+              credits: true,
+            }
+          } 
+        } 
+      },
       moves: { orderBy: { createdAt: "asc" } },
     },
   });

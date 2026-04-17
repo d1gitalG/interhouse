@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { AgentDetailModal } from "@/components/AgentDetailModal";
 
 type House = "RED" | "GREEN" | "BLUE" | "YELLOW";
 type StrategyProfile = "AGGRESSIVE" | "DEFENSIVE" | "CHAOTIC" | "CALCULATED" | "ADAPTIVE";
@@ -32,6 +33,7 @@ export default function AgentPage() {
   const [strategyProfile, setStrategyProfile] = useState<StrategyProfile>("AGGRESSIVE");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadAgents = async () => {
@@ -153,7 +155,8 @@ export default function AgentPage() {
             {agents.map((agent) => (
               <article
                 key={agent.id}
-                className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-4 md:grid-cols-6"
+                onClick={() => setSelectedAgentId(agent.id)}
+                className="grid gap-3 cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/70 p-4 md:grid-cols-6 hover:border-zinc-700 transition-colors"
               >
                 <div className="md:col-span-2">
                   <p className="font-medium">{agent.name}</p>
@@ -174,6 +177,13 @@ export default function AgentPage() {
             ))}
           </div>
         </section>
+
+        {selectedAgentId && (
+          <AgentDetailModal 
+            agentId={selectedAgentId} 
+            onClose={() => setSelectedAgentId(null)} 
+          />
+        )}
       </div>
     </main>
   );

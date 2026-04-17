@@ -207,3 +207,55 @@ export async function settleLockedMatchStakeCredits(params: {
   });
   if (winnerSettle.count !== 1) throw new Error("STAKE_LOCK_CORRUPT");
 }
+
+export async function refundLockedMatchStakeCredits(params: {
+  tx: Prisma.TransactionClient;
+  matchId: string;
+}): Promise<void> {
+  const { tx, matchId } = params;
+
+  const match = await tx.match.findUnique({
+    where: { id: matchId },
+    include: { participants: true },
+  });
+
+  if (!match) throw new Error("MATCH_NOT_FOUND");
+  if (match.stakeMode !== "CREDITS") return;
+  if (!match.creditsLockedAt) return; // Nothing to refund if never locked
+  if (match.creditsSettledAt) return; // Cannot refund if already settled
+
+  // Mark as settled (using a refund timestamp would be better but we only have settledAt)
+  // To avoid adding a new column to schema, we use creditsSettledAt to prevent double settlement/refund.
+  const refundClaim = await tx.match.updateMany({
+    where: {
+      id: match.id,
+      stakeMode: "CREDITS",
+      creditsLockedAt: { not: null },
+      creditsSettledAt: null,
+    },
+    data: {
+      creditsSettledAt: new Date(),
+    },
+  });
+
+  if (refundClaim.count !== 1) return;
+
+  if (match.stakeAmount <= 0) return;
+
+  for (const participant of match.participants) {
+    const refund = await tx.agentProfile.updateMany({
+      where: {
+        id: participant.agentId,
+        lockedCredits: { gte: match.stakeAmount },
+      },
+      data: {
+        credits: { increment: match.stakeAmount },
+        lockedCredits: { decrement: match.stakeAmount },
+      },
+    });
+
+    if (refund.count !== 1) {
+      throw new Error("STAKE_LOCK_CORRUPT");
+    }
+  }
+}

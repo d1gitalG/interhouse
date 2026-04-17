@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { applySeriesRoundOutcome } from "@/lib/match-engine";
 import { prisma } from "@/lib/prisma";
 import { getAgentMove } from "@/lib/agent-engine";
-import { settleLockedMatchStakeCredits } from "@/lib/credits";
-import { checkSeriesWinner, resolveRPS, type RpsMove } from "@/lib/rps-engine";
+import { resolveRPS, type RpsMove } from "@/lib/rps-engine";
 
 const GameSchema = z.enum(["RPS", "TTT", "C4"]);
 
@@ -151,61 +151,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ matchId: strin
         }
 
         const outcome = resolveRPS(p1Move, p2Move);
-
-        let p1Score = p1.score;
-        let p2Score = p2.score;
-
-        if (outcome === "P1_WIN") {
-          p1Score += 1;
-          await tx.matchParticipant.update({
-            where: { id: p1.id },
-            data: { score: { increment: 1 } },
-          });
-        } else if (outcome === "P2_WIN") {
-          p2Score += 1;
-          await tx.matchParticipant.update({
-            where: { id: p2.id },
-            data: { score: { increment: 1 } },
-          });
-        }
-
-        const seriesWinner = checkSeriesWinner(p1Score, p2Score, matchInTx.series);
-
-        if (seriesWinner) {
-          const winner = seriesWinner === "P1" ? p1 : p2;
-          const loser = seriesWinner === "P1" ? p2 : p1;
-
-          await tx.match.update({
-            where: { id: matchInTx.id },
-            data: {
-              status: "COMPLETED",
-              winnerId: winner.agentId,
-            },
-          });
-
-          await tx.agentProfile.update({
-            where: { id: winner.agentId },
-            data: { wins: { increment: 1 } },
-          });
-          await tx.agentProfile.update({
-            where: { id: loser.agentId },
-            data: { losses: { increment: 1 } },
-          });
-
-          if (matchInTx.stakeMode === "CREDITS") {
-            await settleLockedMatchStakeCredits({
-              tx,
-              matchId: matchInTx.id,
-              winnerAgentId: winner.agentId,
-              loserAgentId: loser.agentId,
-            });
-          }
-        } else {
-          await tx.match.update({
-            where: { id: matchInTx.id },
-            data: { currentRound: { increment: 1 } },
-          });
-        }
+        await applySeriesRoundOutcome({
+          tx,
+          matchId: matchInTx.id,
+          series: matchInTx.series,
+          stakeMode: matchInTx.stakeMode,
+          p1,
+          p2,
+          roundWinner: outcome === "P1_WIN" ? "P1" : outcome === "P2_WIN" ? "P2" : null,
+        });
       }
 
       const refreshedMatch = await tx.match.findUnique({

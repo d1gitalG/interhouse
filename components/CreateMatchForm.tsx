@@ -13,6 +13,7 @@ type Agent = {
   id: string;
   name: string;
   house: House;
+  credits: number;
 };
 
 export default function CreateMatchForm({ type }: Props) {
@@ -58,6 +59,18 @@ export default function CreateMatchForm({ type }: Props) {
   }, []);
 
   const creator = agents.find((agent) => agent.id === creatorAgentId) ?? null;
+  const isSolStubSelected = stakeMode === "SOL";
+  const walletStubSteps = isSolStubSelected
+    ? [
+        "1. Connect creator wallet (stub)",
+        "2. Approve match escrow funding (stub)",
+        "3. Release escrow to winner on completion (stub)",
+      ]
+    : [
+        "Wallet remains disconnected in credits mode.",
+        "Escrow account creation stays hidden until SOL mode is live.",
+        "Credits flow continues to settle off-chain in the current app.",
+      ];
   const opponentOptions = useMemo(() => {
     if (!creator) return [];
     return agents.filter((agent) => {
@@ -79,6 +92,11 @@ export default function CreateMatchForm({ type }: Props) {
     setIsSubmitting(true);
 
     try {
+      if (isSolStubSelected) {
+        setErr("SOL escrow is still a UI stub. Switch back to credits to create a live match.");
+        return;
+      }
+
       const res = await fetch("/api/matches", {
         method: "POST",
         headers: {
@@ -113,13 +131,12 @@ export default function CreateMatchForm({ type }: Props) {
   }
 
   return (
-    <div className="rounded border p-4 max-w-xl">
-      <p className="text-xs text-gray-500">Mode: {type}</p>
-      <div className="mt-2 grid grid-cols-2 gap-3">
+    <div className="rounded border-none p-0 max-w-none">
+      <div className="mt-2 grid grid-cols-2 gap-4">
         <label className="text-sm col-span-2">
           Creator agent
           <select
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             value={creatorAgentId}
             onChange={(e) => setCreatorAgentId(e.target.value)}
             disabled={isLoadingAgents || agents.length === 0}
@@ -127,7 +144,7 @@ export default function CreateMatchForm({ type }: Props) {
             {agents.length === 0 ? <option value="">No agents available</option> : null}
             {agents.map((agent) => (
               <option key={agent.id} value={agent.id}>
-                {agent.name} ({agent.house})
+                {agent.name} ({agent.house}) — {agent.credits.toLocaleString()} CR
               </option>
             ))}
           </select>
@@ -136,7 +153,7 @@ export default function CreateMatchForm({ type }: Props) {
         <label className="text-sm col-span-2">
           Opponent agent
           <select
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             value={opponentAgentId}
             onChange={(e) => setOpponentAgentId(e.target.value)}
             disabled={!creator || opponentOptions.length === 0}
@@ -152,7 +169,7 @@ export default function CreateMatchForm({ type }: Props) {
             ) : null}
             {opponentOptions.map((agent) => (
               <option key={agent.id} value={agent.id}>
-                {agent.name} ({agent.house})
+                {agent.name} ({agent.house}) — {agent.credits.toLocaleString()} CR
               </option>
             ))}
           </select>
@@ -161,7 +178,7 @@ export default function CreateMatchForm({ type }: Props) {
         <label className="text-sm">
           Game
           <select
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             value={game}
             onChange={(e) => setGame(e.target.value as "RPS" | "TTT")}
           >
@@ -173,7 +190,7 @@ export default function CreateMatchForm({ type }: Props) {
         <label className="text-sm">
           Series
           <select
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             value={series}
             onChange={(e) => setSeries(e.target.value as "QUICK" | "BO3" | "BO5")}
           >
@@ -186,7 +203,7 @@ export default function CreateMatchForm({ type }: Props) {
         <label className="text-sm">
           Stake mode
           <select
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             value={stakeMode}
             onChange={(e) => setStakeMode(e.target.value as "CREDITS" | "SOL")}
           >
@@ -198,7 +215,7 @@ export default function CreateMatchForm({ type }: Props) {
         <label className="text-sm">
           Stake amount
           <input
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none focus:border-zinc-500"
             type="number"
             min={0}
             value={stakeAmount}
@@ -207,12 +224,69 @@ export default function CreateMatchForm({ type }: Props) {
         </label>
       </div>
 
+      <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/10 p-4 text-sm text-sky-50">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-lg">
+            <p className="text-xs font-semibold tracking-[0.3em] text-sky-200/80">SOLANA PREVIEW</p>
+            <p className="mt-2 font-medium">Wallet connection and escrow stub</p>
+            <p className="mt-1 text-sky-100/80">
+              Phantom/Backpack connection, signing, and escrow account creation are demo-only in this form.
+            </p>
+          </div>
+          <div className="rounded-xl border border-sky-200/20 bg-[#05070C]/40 p-4 md:min-w-64">
+            <p className="text-sm font-medium text-sky-50">Wallet status</p>
+            <p className="mt-1 text-sm text-sky-100/70">Disconnected</p>
+            <button
+              type="button"
+              disabled
+              className="mt-3 w-full rounded-lg border border-sky-200/20 px-4 py-2 text-sm font-medium text-sky-50 opacity-70"
+            >
+              Connect Wallet (stub)
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-sky-200/15 bg-[#05070C]/30 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-sky-200/70">Creator wallet</p>
+            <p className="mt-2 font-medium text-sky-50">{creator ? `${creator.name} wallet pending` : "Awaiting agent"}</p>
+            <p className="mt-1 text-xs text-sky-100/65">No address attached in stub mode.</p>
+          </div>
+          <div className="rounded-xl border border-sky-200/15 bg-[#05070C]/30 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-sky-200/70">Escrow account</p>
+            <p className="mt-2 font-medium text-sky-50">Not initialized</p>
+            <p className="mt-1 text-xs text-sky-100/65">Program-derived address and funding step are placeholders.</p>
+          </div>
+          <div className="rounded-xl border border-sky-200/15 bg-[#05070C]/30 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-sky-200/70">Settlement</p>
+            <p className="mt-2 font-medium text-sky-50">Stubbed release</p>
+            <p className="mt-1 text-xs text-sky-100/65">Winner payout UI only. No on-chain transfer occurs.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-sky-200/15 bg-[#05070C]/30 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-sky-200/70">Preview flow</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-sky-100/75">
+            {walletStubSteps.map((step) => (
+              <span key={step} className="rounded-full border border-sky-200/15 px-2 py-1">
+                {step}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-sky-100/70">
+            {isSolStubSelected
+              ? "SOL mode is preview-only here and will not create a playable escrow-backed match."
+              : "Credits mode remains the only live path for playable matches while the wallet stub stays visible."}
+          </p>
+        </div>
+      </div>
+
       <button
-        className="mt-4 rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+        className="mt-6 w-full rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 disabled:opacity-40"
         onClick={onCreate}
-        disabled={isLoadingAgents || isSubmitting || !creatorAgentId}
+        disabled={isLoadingAgents || isSubmitting || !creatorAgentId || isSolStubSelected}
       >
-        {isSubmitting ? "Creating..." : "Create match"}
+        {isSubmitting ? "Creating..." : isSolStubSelected ? "SOL Stub Only" : "Create Direct Match"}
       </button>
 
       {err && <div className="mt-3 text-sm text-red-600">{err}</div>}

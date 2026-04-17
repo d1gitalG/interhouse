@@ -15,6 +15,8 @@ type MatchDetails = {
   currentRound: number;
   stakeMode: "CREDITS" | "SOL";
   stakeAmount: number;
+  solEscrowAddress?: string | null;
+  solSettledAt?: string | null;
   winnerId: string | null;
   participants: Array<{
     id: string;
@@ -26,6 +28,8 @@ type MatchDetails = {
       name: string;
       house: House;
       credits: number;
+      personality?: string | null;
+      strategy?: string | null;
     };
   }>;
   moves: Array<{
@@ -59,12 +63,25 @@ export default function MatchPage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
   const matchRef = useRef<MatchDetails | null>(null);
   const tickInFlightRef = useRef(false);
 
   useEffect(() => {
     matchRef.current = match;
   }, [match]);
+
+  const toggleReasoning = (agentId: string) => {
+    setExpandedReasoning((prev) => {
+      const next = new Set(prev);
+      if (next.has(agentId)) {
+        next.delete(agentId);
+      } else {
+        next.add(agentId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!matchId) return;
@@ -197,6 +214,24 @@ export default function MatchPage() {
     return match.participants.find((p) => p.agentId === match.winnerId)?.agent ?? null;
   }, [match]);
 
+  const escrowStubState = useMemo(() => {
+    if (!match) return [];
+
+    const walletState = match.stakeMode === "SOL" ? "Awaiting wallet approval" : "Wallet not required";
+    const escrowState = match.solEscrowAddress ? `Escrow ready: ${match.solEscrowAddress}` : "Escrow not initialized";
+    const settlementState = match.solSettledAt
+      ? `Settled at ${new Date(match.solSettledAt).toLocaleString()}`
+      : match.status === "COMPLETED"
+        ? "Settlement stub pending winner payout"
+        : "Settlement not started";
+
+    return [
+      { label: "Wallet", value: walletState },
+      { label: "Escrow", value: escrowState },
+      { label: "Settlement", value: settlementState },
+    ];
+  }, [match]);
+
   const latestReasoningByAgent = useMemo(() => {
     const output = new Map<string, MatchDetails["moves"][number]>();
     if (!match) return output;
@@ -204,6 +239,23 @@ export default function MatchPage() {
       output.set(move.agentId, move);
     }
     return output;
+  }, [match]);
+
+  const resourceCounts = useMemo(() => {
+    const counts = new Map<string, Record<string, number>>();
+    if (!match || match.game !== "RPS") return counts;
+
+    for (const p of match.participants) {
+      const usage = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
+      match.moves
+        .filter((m) => m.agentId === p.agentId)
+        .forEach((m) => {
+          const move = m.move.toUpperCase();
+          if (move in usage) usage[move as keyof typeof usage]++;
+        });
+      counts.set(p.agentId, usage);
+    }
+    return counts;
   }, [match]);
 
   const tttState = useMemo(() => {
@@ -254,12 +306,94 @@ export default function MatchPage() {
                 {match.status === "ACTIVE" ? " (autonomous rounds running)" : ""}
               </p>
 
+              <div
+                className={`mt-4 rounded-xl border p-4 text-sm ${
+                  match.stakeMode === "SOL"
+                    ? "border-sky-500/30 bg-sky-500/10 text-sky-50"
+                    : "border-zinc-800 bg-zinc-950/70 text-zinc-200"
+                }`}
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="max-w-2xl">
+                    <p className="text-xs font-semibold tracking-[0.3em] text-current/70 uppercase">Escrow Roadmap</p>
+                    <p className="mt-2 font-medium">
+                      {match.stakeMode === "SOL" ? "Solana wallet and escrow integration" : "Future on-chain settlement"}
+                    </p>
+                    <p className="mt-1 text-current/80">
+                      {match.stakeMode === "SOL"
+                        ? "SOL matches are currently in preview mode. On-chain wallet approval, escrow funding, and automated settlement are not yet live."
+                        : "This match is using the Credits system. The Solana integration represented here is a functional preview of the upcoming on-chain path."}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-current/15 bg-[#05070C]/30 p-4 md:min-w-64">
+                    <p className="text-sm font-medium">Wallet connection</p>
+                    <p className="mt-1 text-sm opacity-60">
+                      {match.stakeMode === "SOL" ? "Disconnected (Stub)" : "Not required for Credits"}
+                    </p>
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-3 w-full rounded-lg border border-current/20 px-4 py-2 text-sm font-medium opacity-50 cursor-not-allowed"
+                    >
+                      {match.stakeMode === "SOL" ? "Approve Escrow" : "Connect Wallet"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {escrowStubState.map((item) => (
+                    <div key={item.label} className="rounded-xl border border-current/15 bg-[#05070C]/30 p-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-current/70">{item.label}</p>
+                      <p className="mt-2 font-medium">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-current/20 px-2 py-1">Funding signature: stub</span>
+                  <span className="rounded-full border border-current/20 px-2 py-1">Escrow PDA: placeholder</span>
+                  <span className="rounded-full border border-current/20 px-2 py-1">Winner payout: stub</span>
+                </div>
+              </div>
+
               {match.status === "COMPLETED" && winner ? (
                 <div
-                  className="mt-4 rounded-lg px-4 py-3 text-sm font-semibold text-white"
-                  style={{ backgroundColor: HOUSE_COLORS[winner.house] }}
+                  className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center animate-in fade-in zoom-in duration-500"
+                  style={{
+                    borderColor: HOUSE_COLORS[winner.house],
+                    backgroundColor: `${HOUSE_COLORS[winner.house]}15`,
+                  }}
                 >
-                  Winner: {winner.name} ({winner.house})
+                  <div
+                    className="flex h-20 w-20 items-center justify-center rounded-full text-4xl shadow-2xl"
+                    style={{ backgroundColor: HOUSE_COLORS[winner.house] }}
+                  >
+                    🏆
+                  </div>
+                  <h2 className="mt-6 text-4xl font-black tracking-tighter text-white uppercase">
+                    Series Winner
+                  </h2>
+                  <p className="mt-2 text-2xl font-bold" style={{ color: HOUSE_COLORS[winner.house] }}>
+                    {winner.name}
+                  </p>
+                  <p className="mt-1 text-sm font-medium tracking-[0.2em] text-zinc-400 uppercase">
+                    House {winner.house}
+                  </p>
+                  
+                  <div className="mt-8 flex gap-4">
+                    <div className="rounded-xl border border-white/10 bg-black/40 px-6 py-3">
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Final Score</p>
+                      <p className="mt-1 text-xl font-mono font-bold">
+                        {match.participants.find(p => p.isCreator)?.score} - {match.participants.find(p => !p.isCreator)?.score}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/40 px-6 py-3">
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Payout</p>
+                      <p className="mt-1 text-xl font-mono font-bold text-emerald-400">
+                        +{match.stakeAmount * 2} {match.stakeMode}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
@@ -298,21 +432,70 @@ export default function MatchPage() {
             <section className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
               <h2 className="text-xl font-semibold">Participants</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {match.participants.map((participant) => (
-                  <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{participant.agent.name}</p>
-                      <span
-                        className="rounded-full px-2 py-1 text-xs font-semibold text-white"
-                        style={{ backgroundColor: HOUSE_COLORS[participant.agent.house] }}
-                      >
-                        {participant.agent.house}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-zinc-300">Score: {participant.score}</p>
-                    <p className="text-sm text-zinc-300">Credits: {participant.agent.credits}</p>
-                  </article>
-                ))}
+                {match.participants.map((participant) => {
+                  const usage = resourceCounts.get(participant.agentId);
+                  const MOVE_LIMIT = 5;
+
+                  return (
+                    <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{participant.agent.name}</p>
+                        <span
+                          className="rounded-full px-2 py-1 text-xs font-semibold text-white"
+                          style={{ backgroundColor: HOUSE_COLORS[participant.agent.house] }}
+                        >
+                          {participant.agent.house}
+                        </span>
+                      </div>
+                      {participant.agent.personality ? (
+                        <p className="mt-2 text-xs italic text-zinc-400">"{participant.agent.personality}"</p>
+                      ) : null}
+
+                      {usage ? (
+                        <div className="mt-4 space-y-2 border-t border-zinc-800 pt-4">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Resource Limits</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {["ROCK", "PAPER", "SCISSORS"].map((move) => {
+                              const used = usage[move] || 0;
+                              const remaining = Math.max(0, MOVE_LIMIT - used);
+                              const percent = (used / MOVE_LIMIT) * 100;
+
+                              return (
+                                <div key={move} className="space-y-1">
+                                  <div className="flex items-center justify-between text-[10px]">
+                                    <span className="font-medium text-zinc-400">{move}</span>
+                                    <span className={remaining === 0 ? "text-red-500 font-bold" : "text-zinc-200"}>
+                                      {remaining}
+                                    </span>
+                                  </div>
+                                  <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+                                    <div
+                                      className={`h-full transition-all duration-500 ${
+                                        remaining === 0 ? "bg-red-600" : remaining === 1 ? "bg-amber-500" : "bg-emerald-500"
+                                      }`}
+                                      style={{ width: `${percent}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-3 space-y-1 text-sm text-zinc-300">
+                        <p>Score: {participant.score}</p>
+                        <p>Credits: {participant.agent.credits}</p>
+                        {participant.agent.strategy ? (
+                          <p className="mt-2 border-t border-zinc-800 pt-2 text-xs text-zinc-400">
+                            <span className="font-semibold uppercase tracking-wider text-zinc-500">Strategy:</span>{" "}
+                            {participant.agent.strategy}
+                          </p>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </section>
 
@@ -321,18 +504,40 @@ export default function MatchPage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {match.participants.map((participant) => {
                   const lastMove = latestReasoningByAgent.get(participant.agentId);
+                  const isExpanded = expandedReasoning.has(participant.agentId);
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                      <p className="text-sm font-medium">{participant.agent.name}</p>
-                      <p className="mt-2 text-xs text-zinc-400">
-                        {lastMove ? `Round ${lastMove.round} | ${lastMove.move}` : "No move yet"}
-                      </p>
-                      {lastMove?.reasoning === "Fallback move used due to provider response error." ? (
-                        <p className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300">
-                          Provider fallback
-                        </p>
-                      ) : null}
-                      <p className="mt-2 text-sm text-zinc-200">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{participant.agent.name}</p>
+                          <p className="mt-1 text-xs text-zinc-400">
+                            {lastMove ? `Round ${lastMove.round} | ${lastMove.move}` : "No move yet"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleReasoning(participant.agentId)}
+                          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                        >
+                          {isExpanded ? "Collapse" : "Expand"}
+                        </button>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {lastMove?.reasoning === "Fallback move used due to provider response error." ? (
+                          <p className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300">
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Provider fallback
+                          </p>
+                        ) : lastMove?.reasoning ? (
+                          <p className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            Provider healthy
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <p className={`mt-3 text-sm text-zinc-200 ${isExpanded ? "" : "line-clamp-2"}`}>
                         {lastMove?.reasoning ?? "Reasoning not available yet."}
                       </p>
                     </article>
@@ -396,5 +601,3 @@ export default function MatchPage() {
     </main>
   );
 }
-
-

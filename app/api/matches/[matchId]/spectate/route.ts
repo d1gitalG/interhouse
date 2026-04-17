@@ -1,7 +1,20 @@
 import { prisma } from "@/lib/prisma";
 
 const MATCH_INCLUDE = {
-  participants: { include: { agent: true } },
+  participants: { 
+    include: { 
+      agent: {
+        select: {
+          id: true,
+          name: true,
+          house: true,
+          credits: true,
+          personality: true,
+          strategy: true,
+        }
+      }
+    } 
+  },
   moves: { orderBy: { createdAt: "asc" as const } },
 } as const;
 
