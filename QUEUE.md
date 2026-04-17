@@ -137,8 +137,12 @@ _Last updated: 2026-03-28_
   - **Done:** Skill codified in `workspace/skills/interhouse-maintenance/SKILL.md`.
   - **Done:** Scheduled cron to run every 4 hours. Initial sweep cleared 7 matches.
 
-- `IH-039` - `DONE` - Move match tick logic to an OpenClaw cron
-  - **Done:** Refactored tick logic into `interhouse/lib/tick-logic.ts`.
-  - **Done:** Created `scripts/match-ticker.ts` and `workspace/skills/interhouse-ticker/`.
-  - **Done:** Scheduled cron to run every 5 minutes. Matches now progress autonomously.
+- `IH-040` - `DONE` - Production environment setup and Vercel deployment
+  - **Done:** Deployed to `https://interhouse-five.vercel.app`. Added `prisma generate` and fixed TS errors.
+  - **Verified 2026-04-17:** Live at URL.
+
+- `IH-041` - `FAILED` - Final production smoke test (real match on live URL)
+  - **Status:** Match creation (/api/matches) returns 500.
+  - **Root Cause:** App uses `PrismaBetterSqlite3` adapter which is incompatible with Vercel's serverless runtime.
+  - **Next:** Switch to Postgres or Turso for production.
 

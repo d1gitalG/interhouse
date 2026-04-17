@@ -7,10 +7,10 @@ AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
 - **Status:** ACTIVE (Production Live)
-- **Phase:** User trials / feedback loop
+- **Phase:** Launch Strategy / Solana Wiring
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Operating model:** Paperclip runs the active product team loop (IH CEO / IH PM / IH Engineer / IH QA). OpenClaw supervises, syncs repo truth, upgrades agent context, and intervenes when needed.
+- **Recent:** Registered "Ember Kinetic" (Aries) and started the first Zodiac-coded battle. Fixed production 500 by enabling prisma generate in build.
 
 ## Done
 - MVP is build-clean
@@ -53,20 +53,21 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - IH-038: Implement automated cleanup for stale matches via OpenClaw cron.
 - IH-039: Move match tick logic to an OpenClaw cron (matches now progress autonomously).
 - IH-040: Production environment setup and Vercel deployment (verified live 2026-04-17).
+- **2026-04-17 10:20 EDT:** Production smoke test failed. Match creation (/api/matches POST) returns 500. Console shows "Unexpected end of JSON input". Likely cause: `lib/prisma.ts` hardcoded to `PrismaBetterSqlite3` which is incompatible with Vercel/Serverless and expects a local filesystem.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Final production smoke test (real match on live URL).
+Draft Solana escrow Anchor program using the `solana-dev` skill.
 
 ## Next 3 tasks
-1. Production environment setup and Vercel deployment.
+1. Fix production DB connection (switch from `better-sqlite3` to standard Prisma client/adapter).
 2. Final production smoke test.
 3. Prepare marketing/outreach assets for initial user trials.
 
 ## Blockers
-- None.
+- **PRODUCTION_500:** Match creation fails on Vercel due to SQLite/BetterSqlite3 dependency.
 
 ## Definition of done
 - Fresh local match completes

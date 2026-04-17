@@ -1,5 +1,12 @@
+import { loadEnvFile } from "node:process";
 import { prisma } from "../lib/prisma";
 import { processMatchTick } from "../lib/tick-logic";
+
+try {
+  loadEnvFile(".env");
+} catch {
+  // Ignore if .env doesn't exist
+}
 
 async function runTicker() {
   console.log(`[Ticker] Pulse check started at ${new Date().toISOString()}`);
