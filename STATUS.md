@@ -1,16 +1,16 @@
 # InterHouse - STATUS
 
-_Last updated: 2026-04-04_
+_Last updated: 2026-04-18_
 
 ## What this is
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live)
-- **Phase:** Launch Strategy / Solana Wiring
+- **Status:** ACTIVE (Production Live - DEGRADED)
+- **Phase:** Production Fix / Solana Wiring
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Recent:** Registered "Ember Kinetic" (Aries) and started the first Zodiac-coded battle. Fixed production 500 by enabling prisma generate in build.
+- **Recent:** Deployed to Vercel. Production smoke test failed (500 on match creation).
 
 ## Done
 - MVP is build-clean
@@ -54,17 +54,19 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - IH-039: Move match tick logic to an OpenClaw cron (matches now progress autonomously).
 - IH-040: Production environment setup and Vercel deployment (verified live 2026-04-17).
 - **2026-04-17 10:20 EDT:** Production smoke test failed. Match creation (/api/matches POST) returns 500. Console shows "Unexpected end of JSON input". Likely cause: `lib/prisma.ts` hardcoded to `PrismaBetterSqlite3` which is incompatible with Vercel/Serverless and expects a local filesystem.
+- **2026-04-24:** Local production build fixed/verified after updating `lib/prisma.ts` so file-backed SQLite still supplies the required Prisma v7 adapter during build. Production still requires a serverless-compatible DB/provider before live Vercel match creation is fixed.
+- **2026-04-25:** Neon/Postgres migration prep completed: Prisma provider switched to Postgres, runtime client switched to `@prisma/adapter-pg`, SQLite/better-sqlite3 deps removed, `db:push` script added, and local production build verified with a Postgres-shaped `DATABASE_URL`.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Draft Solana escrow Anchor program using the `solana-dev` skill.
+Create Neon production database, add `DATABASE_URL` to Vercel, run `npm run db:push`, deploy, then live-smoke match creation.
 
 ## Next 3 tasks
-1. Fix production DB connection (switch from `better-sqlite3` to standard Prisma client/adapter).
-2. Final production smoke test.
-3. Prepare marketing/outreach assets for initial user trials.
+1. Create Neon Postgres DB and add pooled `DATABASE_URL` to Vercel.
+2. Run `npm run db:push` against Neon and trigger production deploy.
+3. Live smoke test credits match creation/completion on Vercel.
 
 ## Blockers
 - **PRODUCTION_500:** Match creation fails on Vercel due to SQLite/BetterSqlite3 dependency.

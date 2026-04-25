@@ -1,15 +1,18 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import path from "path";
-
-const dbUrl = process.env.DATABASE_URL ?? `file:${path.join(process.cwd(), "dev.db")}`;
-// Strip "file:" prefix for the adapter (it wants a path or ":memory:")
-const dbPath = dbUrl.startsWith("file:") ? dbUrl.slice(5) : dbUrl;
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
 function createClient() {
-  const adapter = new PrismaBetterSqlite3({ url: dbPath });
+  const dbUrl = process.env.DATABASE_URL;
+
+  if (!dbUrl || dbUrl.startsWith("file:")) {
+    throw new Error(
+      "InterHouse requires a Postgres DATABASE_URL. Provision Neon/Vercel Postgres and set DATABASE_URL before running the app.",
+    );
+  }
+
+  const adapter = new PrismaPg({ connectionString: dbUrl });
   return new PrismaClient({ adapter, log: ["error", "warn"] });
 }
 
