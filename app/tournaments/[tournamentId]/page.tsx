@@ -44,6 +44,60 @@ function agentName(tournament: TournamentDetail, agentId: string | null | undefi
   return entry?.agent.name ?? shortId(agentId);
 }
 
+type TournamentMatchDetail = TournamentDetail["matches"][number];
+
+function rpsRoundWinner(
+  first: { agentId: string; move: string },
+  second: { agentId: string; move: string },
+) {
+  const firstMove = first.move.toUpperCase();
+  const secondMove = second.move.toUpperCase();
+  if (firstMove === secondMove) return null;
+  const firstWins =
+    (firstMove === "ROCK" && secondMove === "SCISSORS") ||
+    (firstMove === "SCISSORS" && secondMove === "PAPER") ||
+    (firstMove === "PAPER" && secondMove === "ROCK");
+  return firstWins ? first.agentId : second.agentId;
+}
+
+function buildMatchRecap(tournament: TournamentDetail, tournamentMatch: TournamentMatchDetail) {
+  const match = tournamentMatch.match;
+  const participants = match.participants;
+  const winner = agentName(tournament, match.winnerId);
+  const scoreLine = participants
+    .map((participant) => `${participant.agent.name} ${participant.score}`)
+    .join(" · ");
+
+  const movesByRound = new Map<number, typeof match.moves>();
+  for (const move of match.moves) {
+    const rows = movesByRound.get(move.round) ?? [];
+    rows.push(move);
+    movesByRound.set(move.round, rows);
+  }
+
+  const roundLines = Array.from(movesByRound.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([round, moves]) => {
+      if (moves.length < 2) return `Round ${round}: waiting on moves.`;
+      const [first, second] = moves;
+      const firstName = participants.find((participant) => participant.agentId === first.agentId)?.agent.name ?? shortId(first.agentId);
+      const secondName = participants.find((participant) => participant.agentId === second.agentId)?.agent.name ?? shortId(second.agentId);
+      const roundWinnerId = rpsRoundWinner(first, second);
+      const roundWinner = roundWinnerId ? participants.find((participant) => participant.agentId === roundWinnerId)?.agent.name ?? shortId(roundWinnerId) : null;
+      return roundWinner
+        ? `Round ${round}: ${roundWinner} won — ${firstName} ${first.move} vs ${secondName} ${second.move}.`
+        : `Round ${round}: draw — ${firstName} ${first.move} vs ${secondName} ${second.move}.`;
+    });
+
+  return {
+    title: `Round ${tournamentMatch.round}, Slot ${tournamentMatch.slot}`,
+    matchId: match.id,
+    winner,
+    scoreLine,
+    roundLines,
+  };
+}
+
 async function loadTournament(tournamentId: string) {
   return prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -69,6 +123,10 @@ export default async function TournamentDetailPage({
   }
 
   const completedMatches = tournament.matches.filter((item) => item.match.status === "COMPLETED").length;
+  const completedRecaps = tournament.matches
+    .filter((item) => item.match.status === "COMPLETED")
+    .map((item) => buildMatchRecap(tournament, item));
+  const zeroStake = tournament.entryFeeCredits === 0 && tournament.prizePoolCredits === 0;
   const settlementState = tournament.settledAt
     ? `Settled ${formatDate(tournament.settledAt)}`
     : tournament.status === "COMPLETED"
@@ -150,6 +208,65 @@ export default async function TournamentDetailPage({
                 <p className="text-[10px] uppercase tracking-widest text-zinc-500">Settled At</p>
                 <p className="mt-1 font-semibold text-zinc-100">{formatDate(tournament.settledAt)}</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-zinc-900/80 to-zinc-950 p-6">
+          <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+            <article className="rounded-2xl border border-amber-500/30 bg-black/30 p-5">
+              <p className="text-xs uppercase tracking-[0.25em] text-amber-200/80">Tournament Recap</p>
+              <h2 className="mt-3 text-2xl font-semibold text-zinc-100">
+                {champion ? `${champion} takes the bracket.` : "Champion not decided yet."}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                {zeroStake
+                  ? "No chips were at stake in this run — this was a zero-fee operator/showcase bracket."
+                  : `${formatCredits(tournament.prizePoolCredits)} was at stake with a ${formatCredits(tournament.entryFeeCredits)} entry fee.`}
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Champion</p>
+                  <p className="mt-1 font-semibold text-zinc-100">{champion ?? "TBD"}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Completed</p>
+                  <p className="mt-1 font-mono font-semibold text-zinc-100">{completedMatches}/{tournament.matches.length}</p>
+                </div>
+              </div>
+            </article>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold">Match-by-match story</h2>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Auto recap</p>
+              </div>
+              {completedRecaps.length === 0 ? (
+                <p className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-400">
+                  Completed match recaps will appear here once the bracket starts resolving.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {completedRecaps.map((recap) => (
+                    <article key={recap.matchId} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{recap.title}</p>
+                          <Link href={`/match/${recap.matchId}`} className="mt-1 block text-sm font-semibold text-zinc-100 hover:text-white">
+                            {recap.winner ? `${recap.winner} advanced` : "Match resolved"}
+                          </Link>
+                        </div>
+                        <p className="rounded-full border border-zinc-700 px-3 py-1 font-mono text-xs text-zinc-300">{recap.scoreLine}</p>
+                      </div>
+                      <ul className="mt-3 space-y-1 text-sm leading-6 text-zinc-300">
+                        {recap.roundLines.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
