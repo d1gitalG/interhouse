@@ -7,10 +7,10 @@ AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
 - **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
-- **Phase:** Read-only tournament visibility implemented locally; next is operator/admin controls or first intentional public bracket planning.
+- **Phase:** Tournament visibility and minimal operator controls implemented locally; deployment/env verification next.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Recent:** Read-only tournament UX implemented locally: `/tournaments`, `/tournaments/[tournamentId]`, lobby/home/navigation entry points, and escape links on major pages. Lint and build pass with InterHouse Postgres env.
+- **Recent:** Added guarded tournament write APIs plus unlinked `/operator/tournaments` panel with server-side unlock cookie and create/seed/advance/settle controls. Public tournament UX remains read-only. Lint/build pass with InterHouse Postgres env; unauthenticated tournament POST returns 401 locally.
 - **Safe-branch smoke 2026-04-26 21:22 EDT:** Applied tournament schema to Neon child branch `tournament-smoke-2026-04-26`, built the app against that branch DB, started local Next server, and ran `SMOKE_BASE_URL=http://localhost:3000 npm run smoke:tournament-prize-pool`. Smoke passed: tournament `cmogin11i000400ipxgbv0sbp`, prize pool 100, champion paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 - **Production smoke 2026-04-27 08:16 EDT:** Production schema was pushed, compatible app code deployed, `/api/tournaments` returned 200, and guarded smoke passed against `https://interhouse-five.vercel.app`: tournament `cmoh5vri0000404jrm7o1ckk1`, prize pool 100, champion `cmoh5vrbu000204jr40goc2yz` paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 
@@ -76,11 +76,11 @@ AI Agent Battle Arena built in Next.js + Prisma.
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Commit/deploy the read-only tournament UX slice, then start the next product slice: minimal operator/admin tournament controls behind safety gates.
+Verify/set `INTERNAL_SECRET` in production, then deploy the tournament visibility + operator controls commits.
 
 ## Next 3 tasks
-1. Commit/deploy read-only tournament UX (`/tournaments`, `/tournaments/[tournamentId]`, lobby/home/nav entry points) after final diff review.
-2. Design/implement minimal admin/operator controls: create tournament, seed agents, advance bracket, settle prize pool, admin-only safety gate.
+1. Verify Vercel/production `INTERNAL_SECRET` exists before deployment so guarded tournament writes and `/operator/tournaments` work.
+2. Deploy commits `a756c3e` and `697c1d3` plus the operator-panel commit, then smoke public read-only pages and guarded POST behavior.
 3. Decide first real public bracket size/rules before creating non-smoke tournaments.
 
 ## Blockers

@@ -233,7 +233,10 @@ _Last updated: 2026-04-30_
   - **Done 2026-04-27:** Created `TOURNAMENT_UX_NEXT_SLICE_DECISION.md` recommending a low-risk read-only tournament list/detail UX before admin controls or the first intentional public prize-pool bracket.
   - **Done 2026-04-30:** Implemented `/tournaments`, `/tournaments/[tournamentId]`, lobby/home entry points, and nav exits on major pages. Verified with `npm run lint` and `npm run build` using InterHouse Postgres env.
 
-- `IH-057` - `NEXT` - Minimal tournament operator/admin controls
+- `IH-057` - `IN_REVIEW` - Minimal tournament operator/admin controls
   - **DoD:** Trusted operator can create, seed, advance, and settle tournaments from the app behind an explicit admin/safety gate; no public unsafe write controls are exposed.
-  - **Next:** Define the minimal operator panel surface and guard strategy, then implement create/seed/advance/settle controls.
+  - **Done 2026-04-30:** Added shared `INTERNAL_SECRET` guard for tournament write APIs and reused it for credit adjustment API. Unauthenticated local `POST /api/tournaments` returns 401.
+  - **Done 2026-04-30:** Added unlinked `/operator/tournaments` server-rendered panel. Unlock uses an internal secret form that sets an httpOnly sameSite operator cookie; controls call tournament library functions server-side so the secret is not exposed to client JS.
+  - **Verified:** `npm run lint`, `npm run build` with InterHouse Postgres env, and locked operator page curl smoke returned 200 with unlock UI.
+  - **Next:** Verify production `INTERNAL_SECRET`, deploy, then run public read-only + guarded write smoke checks.
 
