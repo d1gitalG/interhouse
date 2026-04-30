@@ -12,6 +12,7 @@
 const baseUrl = process.env.SMOKE_BASE_URL || "http://localhost:3000";
 const entryFeeCredits = Number(process.env.TOURNAMENT_ENTRY_FEE || 25);
 const allowProd = process.env.ALLOW_PROD_TOURNAMENT_SMOKE === "true";
+const internalSecret = process.env.INTERNAL_SECRET;
 
 if (/interhouse-five\.vercel\.app/i.test(baseUrl) && !allowProd) {
   throw new Error(
@@ -41,7 +42,11 @@ async function request(path, options = {}) {
 }
 
 function post(path, body = {}) {
-  return request(path, { method: "POST", body: JSON.stringify(body) });
+  return request(path, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: internalSecret ? { "x-internal-secret": internalSecret } : undefined,
+  });
 }
 
 async function createAgent(index, runId) {

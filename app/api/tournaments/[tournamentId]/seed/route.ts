@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { requireInternalSecret } from "@/lib/internal-auth";
 import { seedTournament } from "@/lib/tournaments";
 
-export async function POST(_req: Request, ctx: { params: Promise<{ tournamentId: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ tournamentId: string }> }) {
+  const unauthorized = requireInternalSecret(req);
+  if (unauthorized) return unauthorized;
+
   const { tournamentId } = await ctx.params;
   try {
     const tournament = await seedTournament(tournamentId);

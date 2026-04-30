@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireInternalSecret } from "@/lib/internal-auth";
 import { advanceTournamentFromMatch } from "@/lib/tournaments";
 
 const AdvanceBodySchema = z.object({
@@ -8,6 +9,9 @@ const AdvanceBodySchema = z.object({
 });
 
 export async function POST(req: Request, ctx: { params: Promise<{ tournamentId: string }> }) {
+  const unauthorized = requireInternalSecret(req);
+  if (unauthorized) return unauthorized;
+
   const { tournamentId } = await ctx.params;
   const body = await req.json().catch(() => null);
   const parsed = AdvanceBodySchema.safeParse(body);

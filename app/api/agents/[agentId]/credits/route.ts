@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { applyCreditsDelta } from "@/lib/credits";
+import { requireInternalSecret } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 
 const CreditsBodySchema = z.object({
@@ -37,12 +38,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ agentId: strin
   const params = await ctx.params;
   const agentId = params.agentId;
 
-  // Security check
-  const secret = req.headers.get("x-internal-secret");
-  const expected = process.env.INTERNAL_SECRET;
-  if (!expected || secret !== expected) {
-    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const unauthorized = requireInternalSecret(req);
+  if (unauthorized) return unauthorized;
 
   const body = await req.json().catch(() => null);
   const parsed = CreditsBodySchema.safeParse(body);

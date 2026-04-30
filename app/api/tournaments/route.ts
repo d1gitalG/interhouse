@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireInternalSecret } from "@/lib/internal-auth";
 import { createTournament } from "@/lib/tournaments";
 import { prisma } from "@/lib/prisma";
 
@@ -28,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const unauthorized = requireInternalSecret(req);
+  if (unauthorized) return unauthorized;
+
   const body = await req.json().catch(() => null);
   const parsed = CreateTournamentSchema.safeParse(body);
   if (!parsed.success) {
