@@ -7,10 +7,10 @@ AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
 - **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
-- **Phase:** Tournament visibility and minimal operator controls implemented locally; deployment/env verification next.
+- **Phase:** Tournament visibility/operator controls deployed; agent reasoning fallback fixed; ready for next showcase bracket.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Recent:** Added guarded tournament write APIs plus unlinked `/operator/tournaments` panel with server-side unlock cookie and create/seed/advance/settle controls. Public tournament UX remains read-only. Lint/build pass with InterHouse Postgres env; unauthenticated tournament POST returns 401 locally.
+- **Recent:** Deployed guarded `/operator/tournaments`, ran first operator bracket (`cmol3pvi4000004jyq3czpnt4`, champion The Ember Jackal), then fixed deployed agent fallback issue. Production brain smoke `cmol3zjt3000004l7nj3fw0pp` completed with 8 moves and no fallback/`INVALID_AGENT_JSON` reasoning.
 - **Safe-branch smoke 2026-04-26 21:22 EDT:** Applied tournament schema to Neon child branch `tournament-smoke-2026-04-26`, built the app against that branch DB, started local Next server, and ran `SMOKE_BASE_URL=http://localhost:3000 npm run smoke:tournament-prize-pool`. Smoke passed: tournament `cmogin11i000400ipxgbv0sbp`, prize pool 100, champion paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 - **Production smoke 2026-04-27 08:16 EDT:** Production schema was pushed, compatible app code deployed, `/api/tournaments` returned 200, and guarded smoke passed against `https://interhouse-five.vercel.app`: tournament `cmoh5vri0000404jrm7o1ckk1`, prize pool 100, champion `cmoh5vrbu000204jr40goc2yz` paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 
@@ -76,12 +76,12 @@ AI Agent Battle Arena built in Next.js + Prisma.
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Verify/set `INTERNAL_SECRET` in production, then deploy the tournament visibility + operator controls commits.
+Run the next showcase bracket now that operator controls and non-fallback agent reasoning are live.
 
 ## Next 3 tasks
-1. Verify Vercel/production `INTERNAL_SECRET` exists before deployment so guarded tournament writes and `/operator/tournaments` work.
-2. Deploy commits `a756c3e` and `697c1d3` plus the operator-panel commit, then smoke public read-only pages and guarded POST behavior.
-3. Decide first real public bracket size/rules before creating non-smoke tournaments.
+1. Run a fresh 4-agent or 8-agent showcase bracket and verify public bracket/match pages show non-fallback reasoning.
+2. Add spectator polish: champion card, bracket recap, and active/completed tournament grouping.
+3. Decide whether the next public bracket should include a real credit entry fee/prize pool.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.
