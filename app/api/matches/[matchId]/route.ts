@@ -16,6 +16,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ matchId: strin
               name: true,
               house: true,
               credits: true,
+              strategyProfile: true,
+              customSystemPrompt: true,
             }
           } 
         } 

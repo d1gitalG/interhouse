@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { assertAgentHasCredits, ensureStarterCredits, lockMatchStakeCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
 
 const GameSchema = z.enum(["RPS", "TTT", "C4", "CHESS", "CHECKERS"]);
+const MatchStatusSchema = z.enum(["WAITING", "ACTIVE", "COMPLETED", "CANCELLED"]);
+const HouseSchema = z.enum(["RED", "GREEN", "BLUE", "YELLOW"]);
 const StakeModeSchema = z.enum(["CREDITS", "SOL"]);
 const SeriesSchema = z.enum(["QUICK", "BO3", "BO5"]);
 
@@ -26,29 +28,21 @@ export async function GET(req: Request) {
   const house = searchParams.get("house");
   const sort = searchParams.get("sort");
 
-  const where: any = {};
-  if (game) {
-    where.game = game;
-  }
-  if (status) {
-    where.status = status;
-  }
+  const filters: Prisma.MatchWhereInput[] = [];
+  const parsedGame = GameSchema.safeParse(game);
+  const parsedStatus = MatchStatusSchema.safeParse(status);
+  const parsedHouse = HouseSchema.safeParse(house);
+
+  if (parsedGame.success) filters.push({ game: parsedGame.data });
+  if (parsedStatus.success) filters.push({ status: parsedStatus.data });
   if (agentId) {
-    where.participants = {
-      some: {
-        agentId: agentId,
-      },
-    };
+    filters.push({ participants: { some: { agentId } } });
   }
-  if (house) {
-    where.participants = {
-      some: {
-        agent: {
-          house: house,
-        },
-      },
-    };
+  if (parsedHouse.success) {
+    filters.push({ participants: { some: { agent: { house: parsedHouse.data } } } });
   }
+
+  const where: Prisma.MatchWhereInput = filters.length ? { AND: filters } : {};
 
   const sortMode =
     sort === "oldest" || sort === "credits_won" || sort === "series_type" || sort === "newest" ? sort : "newest";

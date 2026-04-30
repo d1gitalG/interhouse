@@ -9,8 +9,8 @@ const MATCH_INCLUDE = {
           name: true,
           house: true,
           credits: true,
-          personality: true,
-          strategy: true,
+          strategyProfile: true,
+          customSystemPrompt: true,
         }
       }
     } 

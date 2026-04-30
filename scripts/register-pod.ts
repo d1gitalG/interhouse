@@ -4,7 +4,7 @@ async function registerPod() {
   const user = await prisma.user.findFirst({ where: { walletAddress: 'test-wallet' } });
   if (!user) throw new Error('Test user not found');
 
-  const agents = [
+  const agents: Array<{ name: string; house: 'RED' | 'BLUE' | 'GREEN' | 'YELLOW'; strategyProfile: 'AGGRESSIVE' | 'DEFENSIVE' | 'CHAOTIC' | 'CALCULATED' | 'ADAPTIVE'; customSystemPrompt: string }> = [
     {
       name: 'The Gilded Blade',
       house: 'BLUE',

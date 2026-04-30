@@ -4,11 +4,16 @@ import { prisma } from "@/lib/prisma";
 
 const HouseSchema = z.enum(["RED", "GREEN", "BLUE", "YELLOW"]);
 const StrategySchema = z.enum(["AGGRESSIVE", "DEFENSIVE", "CHAOTIC", "CALCULATED", "ADAPTIVE"]);
+const TierSchema = z.enum(["ROOKIE", "CONTENDER", "CHAMPION", "ELITE"]);
+const ToolSchema = z.enum(["BOARD_ANALYZER", "WIN_PROBABILITY", "MOVE_HISTORY"]);
 
 const UpdateAgentSchema = z.object({
   name: z.string().min(1).optional(),
   house: HouseSchema.optional(),
   strategyProfile: StrategySchema.optional(),
+  tier: TierSchema.optional(),
+  customSystemPrompt: z.string().min(1).nullable().optional(),
+  toolsEnabled: z.array(ToolSchema).optional(),
   nftMint: z.string().optional(),
 });
 
@@ -52,7 +57,7 @@ export async function PATCH(
       data: parsed.data,
     });
     return NextResponse.json({ agent: updated });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "AGENT_UPDATE_FAILED" }, { status: 500 });
   }
 }
@@ -86,7 +91,7 @@ export async function DELETE(
       where: { id: agentId },
     });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "AGENT_DELETE_FAILED" }, { status: 500 });
   }
 }
