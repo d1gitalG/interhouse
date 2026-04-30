@@ -94,7 +94,7 @@ const TOOLS_BY_TIER: Record<string, string[]> = {
 
 function buildSystemPrompt(config: AgentConfig): string {
   const base = "You are " + config.agentName + ", an AI agent competing in the InterHouse battle arena for House " + config.house + ".\n" +
-STRATEGY_PROMPTS[config.strategyProfile] + "\nTactical intents available for RPS: punish-repeat, break-symmetry, bait-counter, resource-denial, match-point-safe, high-risk-read, anti-mirror, bluff-switch. Use an intent that matches your character traits and the strategy analysis. Choose exactly one primary predictedOpponentMove. Do not optimize away your flaw; express it as controlled character. The engine will write match facts. Your reasoning should be only a short character flavor line, max 10 words. Do not mention repeats, prior rounds, rules, resources, seeded opener, strategy analysis, or direct counter.\nYou must respond with ONLY a JSON object. The first character of your response must be `{` and the last character must be `}`. No markdown, no code fence, no preface. Shape: {\"move\": \"<your move>\", \"predictedOpponentMove\": \"<ROCK|PAPER|SCISSORS if RPS>\", \"confidence\": 0.0, \"intent\": \"<one tactical intent>\", \"reasoning\": \"<short character flavor line only>\"}\nThe move must be one of the available moves provided. Note: You have a limited number of uses for each move type (Resource Exhaustion rule). Manage your resources wisely.";
+STRATEGY_PROMPTS[config.strategyProfile] + "\nTactical intents available for RPS: punish-repeat, break-symmetry, counter-counter, bait-counter, resource-denial, match-point-safe, high-risk-read, anti-mirror, bluff-switch. Use an intent that matches your character traits and the strategy analysis. Choose exactly one primary predictedOpponentMove. Do not optimize away your flaw; express it as controlled character. The engine will write match facts. Your reasoning should be only a short character flavor line, max 10 words. Do not mention repeats, prior rounds, rules, resources, seeded opener, strategy analysis, or direct counter.\nYou must respond with ONLY a JSON object. The first character of your response must be `{` and the last character must be `}`. No markdown, no code fence, no preface. Shape: {\"move\": \"<your move>\", \"predictedOpponentMove\": \"<ROCK|PAPER|SCISSORS if RPS>\", \"confidence\": 0.0, \"intent\": \"<one tactical intent>\", \"reasoning\": \"<short character flavor line only>\"}\nThe move must be one of the available moves provided. Note: You have a limited number of uses for each move type (Resource Exhaustion rule). Manage your resources wisely.";
   return config.customSystemPrompt ? base + "\n\nCustom directive: " + config.customSystemPrompt : base;
 }
 
@@ -364,6 +364,34 @@ function enforceRpsPredictionConsistency(gameState: GameState, parsed: ParsedAge
   };
 }
 
+function enforceMirrorAsymmetry(gameState: GameState, parsed: ParsedAgentMove): ParsedAgentMove {
+  if (gameState.game !== "RPS") return parsed;
+  const last = gameState.tacticalContext?.lastRound;
+  if (!last || last.outcome !== "DRAW" || last.selfMove !== last.opponentMove) return parsed;
+
+  const sharedMove = normalizeRpsMove(last.selfMove);
+  if (!sharedMove) return parsed;
+
+  const directBreak = getRpsCounter(sharedMove);
+  const counterCounter = getRpsCounter(directBreak);
+  const chosen = gameState.tacticalContext?.initiativeRole === "CHALLENGER" ? counterCounter : directBreak;
+  const predictedOpponentMove = gameState.tacticalContext?.initiativeRole === "CHALLENGER" ? directBreak : sharedMove;
+
+  if (!gameState.availableMoves.includes(chosen)) return parsed;
+
+  return {
+    ...parsed,
+    move: chosen,
+    predictedOpponentMove,
+    intent: gameState.tacticalContext?.initiativeRole === "CHALLENGER" ? "counter-counter" : "break-symmetry",
+    confidence: Math.max(parsed.confidence ?? 0, 0.68),
+    reasoning:
+      gameState.tacticalContext?.initiativeRole === "CHALLENGER"
+        ? `Mirror broke obvious toward ${directBreak}; I counter-counter with ${chosen}.`
+        : `Mirror on ${sharedMove}; I break first with ${chosen}.`,
+  };
+}
+
 function getDisplayIntent(ctx: GameState["tacticalContext"], rawIntent?: string): string | undefined {
   if (!rawIntent) return undefined;
   const intent = rawIntent.trim();
@@ -374,6 +402,8 @@ function getDisplayIntent(ctx: GameState["tacticalContext"], rawIntent?: string)
   if (intent === "punish-repeat" && !opponentRepeated) {
     return mirroredDraw ? "break-mirror" : "punish-read";
   }
+
+  if (intent === "break-symmetry") return "break-mirror";
 
   return intent;
 }
@@ -408,6 +438,8 @@ function getCharacterActionLine(params: {
             ? "Let them bite"
             : params.intent === "bluff-switch"
               ? "Cut sideways"
+              : params.intent === "counter-counter"
+                ? "Beat the obvious break"
               : params.intent === "anti-mirror"
                 ? "Answer the angle"
                 : params.intent === "match-point-safe"
@@ -514,7 +546,7 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       ? await callGemini(systemPrompt, userMessage)
       : await callAnthropic(systemPrompt, userMessage);
 
-    const consistent = composeRpsReasoning(gameState, enforceRpsPredictionConsistency(gameState, parsed));
+    const consistent = composeRpsReasoning(gameState, enforceMirrorAsymmetry(gameState, enforceRpsPredictionConsistency(gameState, parsed)));
 
     return {
       move: consistent.move,
@@ -527,7 +559,7 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
     console.error("[AGENT ENGINE ERROR]", errorMsg);
     const recoveryMove = buildDeterministicRecoveryMove(gameState);
     if (recoveryMove) {
-      const consistentRecovery = composeRpsReasoning(gameState, enforceRpsPredictionConsistency(gameState, recoveryMove));
+      const consistentRecovery = composeRpsReasoning(gameState, enforceMirrorAsymmetry(gameState, enforceRpsPredictionConsistency(gameState, recoveryMove)));
       return {
         move: consistentRecovery.move,
         reasoning: consistentRecovery.reasoning,

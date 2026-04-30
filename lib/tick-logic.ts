@@ -136,19 +136,18 @@ function buildSymmetryAdvice(params: {
   rows: Array<{ selfMove: RpsMove; opponentMove: RpsMove; outcome: "WIN" | "LOSS" | "DRAW" }>;
   isCreator: boolean;
 }): string | undefined {
-  const recent = params.rows.slice(-2);
-  const repeatedDrawSymmetry = recent.length >= 2 && recent.every((row) => row.outcome === "DRAW" && row.selfMove === row.opponentMove);
-  if (!repeatedDrawSymmetry) return undefined;
+  const last = params.rows.at(-1);
+  if (!last || last.outcome !== "DRAW" || last.selfMove !== last.opponentMove) return undefined;
 
-  const lastSharedMove = recent[recent.length - 1].selfMove;
+  const lastSharedMove = last.selfMove;
   const firstOrderCounter = getRpsCounter(lastSharedMove);
   const secondOrderCounter = getRpsCounter(firstOrderCounter);
 
   if (params.isCreator) {
-    return `Repeated draw symmetry detected. As CREATOR/initiator, break symmetry with the direct counter to the last shared move: ${firstOrderCounter}. Avoid repeating ${lastSharedMove}.`;
+    return `Shared ${lastSharedMove} draw detected. As CREATOR/initiator, take the first asymmetry lane: choose the direct breaker ${firstOrderCounter}. Avoid mirroring or overthinking into ${secondOrderCounter}.`;
   }
 
-  return `Repeated draw symmetry detected. As CHALLENGER/responder, expect the creator to break toward ${firstOrderCounter}; consider the second-order counter ${secondOrderCounter}. Avoid simply mirroring ${lastSharedMove}.`;
+  return `Shared ${lastSharedMove} draw detected. As CHALLENGER/responder, assume the creator's obvious break is ${firstOrderCounter}; take the counter-counter lane ${secondOrderCounter}. Avoid matching the creator's direct breaker.`;
 }
 
 function summarizeMoveCounts(moves: RpsMove[]): string {
