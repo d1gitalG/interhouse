@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { buildPostMatchStory, deriveCharacterSummary, parseReasoningBeats } from "@/lib/character-presentation";
 import { createEmptyBoard, type TttBoard } from "@/lib/ttt-engine";
 
 type House = "RED" | "GREEN" | "BLUE" | "YELLOW";
@@ -30,6 +32,8 @@ type MatchDetails = {
       credits: number;
       personality?: string | null;
       strategy?: string | null;
+      strategyProfile?: string | null;
+      customSystemPrompt?: string | null;
     };
   }>;
   moves: Array<{
@@ -241,6 +245,15 @@ export default function MatchPage() {
     return output;
   }, [match]);
 
+  const postMatchStory = useMemo(() => {
+    if (!match || match.status !== "COMPLETED") return null;
+    return buildPostMatchStory({
+      participants: match.participants,
+      moves: match.moves,
+      winnerId: match.winnerId,
+    });
+  }, [match]);
+
   const resourceCounts = useMemo(() => {
     const counts = new Map<string, Record<string, number>>();
     if (!match || match.game !== "RPS") return counts;
@@ -295,8 +308,20 @@ export default function MatchPage() {
         {match ? (
           <>
             <header className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-              <p className="text-xs tracking-[0.3em] text-zinc-400">MATCH {match.id}</p>
-              <h1 className="mt-2 text-3xl font-semibold">{match.game} Arena</h1>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs tracking-[0.3em] text-zinc-400">MATCH {match.id}</p>
+                  <h1 className="mt-2 text-3xl font-semibold">{match.game} Arena</h1>
+                </div>
+                <nav className="flex flex-wrap gap-3">
+                  <Link href="/lobby" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-100 hover:border-zinc-500">
+                    Lobby
+                  </Link>
+                  <Link href="/tournaments" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 hover:border-amber-300/70">
+                    Tournaments
+                  </Link>
+                </nav>
+              </div>
               <p className="mt-3 text-sm text-zinc-300">
                 {match.series} | {match.status} | Round {match.currentRound} | {match.stakeMode}{" "}
                 {match.stakeAmount}
@@ -379,6 +404,9 @@ export default function MatchPage() {
                   <p className="mt-1 text-sm font-medium tracking-[0.2em] text-zinc-400 uppercase">
                     House {winner.house}
                   </p>
+                  {postMatchStory ? (
+                    <p className="mt-5 max-w-2xl text-sm leading-6 text-zinc-200">{postMatchStory}</p>
+                  ) : null}
                   
                   <div className="mt-8 flex gap-4">
                     <div className="rounded-xl border border-white/10 bg-black/40 px-6 py-3">
@@ -435,6 +463,7 @@ export default function MatchPage() {
                 {match.participants.map((participant) => {
                   const usage = resourceCounts.get(participant.agentId);
                   const MOVE_LIMIT = 5;
+                  const character = deriveCharacterSummary(participant.agent);
 
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
@@ -448,8 +477,20 @@ export default function MatchPage() {
                         </span>
                       </div>
                       {participant.agent.personality ? (
-                        <p className="mt-2 text-xs italic text-zinc-400">"{participant.agent.personality}"</p>
+                        <p className="mt-2 text-xs italic text-zinc-400">&ldquo;{participant.agent.personality}&rdquo;</p>
                       ) : null}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200">
+                          {character.archetype}
+                        </span>
+                        <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs text-rose-200">
+                          flaw: {character.flaw}
+                        </span>
+                        <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200">
+                          “{character.voiceCue}”
+                        </span>
+                      </div>
 
                       {usage ? (
                         <div className="mt-4 space-y-2 border-t border-zinc-800 pt-4">
@@ -505,6 +546,8 @@ export default function MatchPage() {
                 {match.participants.map((participant) => {
                   const lastMove = latestReasoningByAgent.get(participant.agentId);
                   const isExpanded = expandedReasoning.has(participant.agentId);
+                  const character = deriveCharacterSummary(participant.agent);
+                  const beats = parseReasoningBeats(lastMove?.reasoning);
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
                       <div className="flex items-start justify-between">
@@ -524,6 +567,19 @@ export default function MatchPage() {
                       </div>
 
                       <div className="mt-2 flex flex-wrap gap-2">
+                        <p className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs font-medium text-zinc-300">
+                          {character.archetype}
+                        </p>
+                        {beats.plan ? (
+                          <p className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-xs font-medium text-violet-200">
+                            Plan: {beats.plan}
+                          </p>
+                        ) : null}
+                        {beats.read ? (
+                          <p className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
+                            Read: {beats.read}
+                          </p>
+                        ) : null}
                         {lastMove?.reasoning === "Fallback move used due to provider response error." ? (
                           <p className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300">
                             <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -538,8 +594,9 @@ export default function MatchPage() {
                       </div>
 
                       <p className={`mt-3 text-sm text-zinc-200 ${isExpanded ? "" : "line-clamp-2"}`}>
-                        {lastMove?.reasoning ?? "Reasoning not available yet."}
+                        {beats.action ?? lastMove?.reasoning ?? "Reasoning not available yet."}
                       </p>
+                      {isExpanded && beats.last ? <p className="mt-2 text-xs text-zinc-500">{beats.last}</p> : null}
                     </article>
                   );
                 })}

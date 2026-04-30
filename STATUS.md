@@ -1,16 +1,18 @@
 # InterHouse - STATUS
 
-_Last updated: 2026-04-18_
+_Last updated: 2026-04-30_
 
 ## What this is
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live - DEGRADED)
-- **Phase:** Production Fix / Solana Wiring
+- **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
+- **Phase:** Read-only tournament visibility implemented locally; next is operator/admin controls or first intentional public bracket planning.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Recent:** Deployed to Vercel. Production smoke test failed (500 on match creation).
+- **Recent:** Read-only tournament UX implemented locally: `/tournaments`, `/tournaments/[tournamentId]`, lobby/home/navigation entry points, and escape links on major pages. Lint and build pass with InterHouse Postgres env.
+- **Safe-branch smoke 2026-04-26 21:22 EDT:** Applied tournament schema to Neon child branch `tournament-smoke-2026-04-26`, built the app against that branch DB, started local Next server, and ran `SMOKE_BASE_URL=http://localhost:3000 npm run smoke:tournament-prize-pool`. Smoke passed: tournament `cmogin11i000400ipxgbv0sbp`, prize pool 100, champion paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
+- **Production smoke 2026-04-27 08:16 EDT:** Production schema was pushed, compatible app code deployed, `/api/tournaments` returned 200, and guarded smoke passed against `https://interhouse-five.vercel.app`: tournament `cmoh5vri0000404jrm7o1ckk1`, prize pool 100, champion `cmoh5vrbu000204jr40goc2yz` paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 
 ## Done
 - MVP is build-clean
@@ -55,21 +57,34 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - IH-040: Production environment setup and Vercel deployment (verified live 2026-04-17).
 - **2026-04-17 10:20 EDT:** Production smoke test failed. Match creation (/api/matches POST) returns 500. Console shows "Unexpected end of JSON input". Likely cause: `lib/prisma.ts` hardcoded to `PrismaBetterSqlite3` which is incompatible with Vercel/Serverless and expects a local filesystem.
 - **2026-04-24:** Local production build fixed/verified after updating `lib/prisma.ts` so file-backed SQLite still supplies the required Prisma v7 adapter during build. Production still requires a serverless-compatible DB/provider before live Vercel match creation is fixed.
-- **2026-04-25:** Neon/Postgres migration prep completed: Prisma provider switched to Postgres, runtime client switched to `@prisma/adapter-pg`, SQLite/better-sqlite3 deps removed, `db:push` script added, and local production build verified with a Postgres-shaped `DATABASE_URL`.
+- **2026-04-25:** Neon/Postgres production setup completed: Vercel `DATABASE_URL` added, `npm run db:push` synced Neon, production redeployed to `https://interhouse-five.vercel.app`, and live smoke verified `GET /api/matches`, `GET /api/agents`, live agent creation, live match creation, join, and tick. Production 500 is fixed.
+- **2026-04-26:** Replaced Vercel `GEMINI_API_KEY` from available local/OpenClaw config and redeployed production. Live smoke still falls back; direct Google API test reports the available key is expired/invalid.
+- **2026-04-26:** Gianni updated Vercel with a fresh Gemini key. Tightened Gemini prompt/JSON handling (`responseMimeType`, higher max output, Gemini 2.0 Flash first), redeployed production, and verified live match `cmog0ggbk000204l2p950qdlf` completed with provider reasoning and `fallback=false`.
+- **2026-04-26:** Seeded Zodiac Exhibition Pod 001 (12 zodiac-coded agents), deployed API support for custom prompts/tier on agent create/update, ran 6 live BO3 exhibition matches, and verified all completed with `fallback=false`. Results saved in `ZODIAC_EXHIBITION_RESULTS_2026-04-26.md`.
+- **2026-04-26:** Fixed repetitive/confused move reasoning by passing structured tactical context into the agent engine: self/opponent previous moves, score, last-round outcome, explicit resource limits, repetition warnings, and creator/challenger symmetry advice. Verification match `cmog2kd94000004jv53sdxbmo` completed with varied moves and no fallback.
+- **2026-04-26:** Added hard RPS rules/counter context plus `predictedOpponentMove` parsing and consistency correction in `agent-engine.ts`. Verification match `cmog380fp000004l4d713y5ci` completed with clearer counter logic and `fallback=false`.
+- **2026-04-26:** Fixed last-round perspective confusion and parser brittleness. Verification match `cmog3wa8q000004l5s409cpcl` completed with correct Round 3→4 reasoning, no fallback text, and no engine recovery needed.
+- **2026-04-26:** Added deeper RPS strategy layer: opponent move frequencies, after-draw tendency, first/second-order reads, score/resource pressure, persona-biased intent suggestions, parsed `intent`/`confidence`, and primary-prediction guardrails. Verification match `cmog4ok3k000004l780duqdj0` completed with `fallback=false`/`recovery=false` and visible intents like `high-risk-read`, `anti-mirror`, and `punish-repeat`.
+- **2026-04-26:** Added persona-aware seeded opening priors. Verification batch of 5 matches produced varied openings (`SCISSORS/ROCK`, `PAPER/ROCK`, `ROCK/ROCK`, `ROCK/SCISSORS`) with `fallback=false`/`recovery=false`; one Gilded Blade win and four Red Comet wins. Latest sample match IDs: `cmog5sjfo000004ktbgqim27e`, `cmog5sobc000a04ktf94jln6y`, `cmog5stli000604ld83gatnkb`, `cmog5sxrn000i04ldkmvheonj`, `cmog5t0ny000s04ldfghlvery`.
+- **2026-04-26:** Ran 16-agent tournament with 12 zodiac agents + 4 wildcard agents. All 15 BO3 RPS matches completed with `fallback=false`/`recovery=false`. Champion: The Granite Crown. Final: The Granite Crown defeated The Twin Static 2-1 (`cmoga8hjl004a04l84twjhepu`).
+- **2026-04-26:** Added derived character layer (traits: aggression/discipline/adaptability/deception/volatility/composure; flaws like overcommit, overmirror, chaos-break, rigidity; voice cues like Tempo/Hold/Answered/Static shift). Deployed and ran Character Cup. Champion: The Ember Jackal, beating The Granite Crown in final (`cmogb5s1e001004jr24oy2vc2`). Report: `CHARACTER_CUP_RESULTS_2026-04-26.md`.
+- **2026-04-26:** Added engine-side RPS reasoning composer to prevent awkward/freeform prose. Verified Granite vs Ember rematch `cmogbsoz6000004laj9ojtc2x`: `fallback=false`, no invalid Round 2 repeat language, and Ember correctly uses `Snap` instead of inheriting Red Comet's `Tempo` cue.
+- **2026-04-26:** Ran BO5 32-agent single-elimination tournament. Champion: The Obsidian Choir. Final: The Obsidian Choir defeated The Ashen Oracle 3-2 (`cmogc88jl00cm04juc451qwce`). Full report: `TOURNAMENT_RESULTS_2026-04-26_32_AGENT_BO5.md`.
+- **2026-04-26:** Added first-class tournament backend foundation: `Tournament`, `TournamentEntry`, and `TournamentMatch` Prisma models; create/list/get/seed/advance/settle API routes; zero-stake match creation for bracket matches; and idempotent winner-take-all tournament settlement. Prepared safe Postgres migration SQL and 4-agent prize-pool smoke; safe Neon child-branch migration/smoke passed.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Create Neon production database, add `DATABASE_URL` to Vercel, run `npm run db:push`, deploy, then live-smoke match creation.
+Commit/deploy the read-only tournament UX slice, then start the next product slice: minimal operator/admin tournament controls behind safety gates.
 
 ## Next 3 tasks
-1. Create Neon Postgres DB and add pooled `DATABASE_URL` to Vercel.
-2. Run `npm run db:push` against Neon and trigger production deploy.
-3. Live smoke test credits match creation/completion on Vercel.
+1. Commit/deploy read-only tournament UX (`/tournaments`, `/tournaments/[tournamentId]`, lobby/home/nav entry points) after final diff review.
+2. Design/implement minimal admin/operator controls: create tournament, seed agents, advance bracket, settle prize pool, admin-only safety gate.
+3. Decide first real public bracket size/rules before creating non-smoke tournaments.
 
 ## Blockers
-- **PRODUCTION_500:** Match creation fails on Vercel due to SQLite/BetterSqlite3 dependency.
+- None for the tournament prize-pool backend foundation.
 
 ## Definition of done
 - Fresh local match completes
@@ -83,3 +98,4 @@ Create Neon production database, add `DATABASE_URL` to Vercel, run `npm run db:p
 - `../idea-to-reality/STATUS_INTERHOUSE.md`
 - `../idea-to-reality/MVP_PRD_LITE_interhouse.md`
 - `../idea-to-reality/AGENT_SYSTEM_SPEC.md`
+- `TOURNAMENT_UX_NEXT_SLICE_DECISION.md`

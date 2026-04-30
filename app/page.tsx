@@ -19,6 +19,9 @@ export default function Home() {
           <Link className="rounded-lg border border-zinc-700 px-5 py-2 font-medium text-zinc-100" href="/lobby">
             Lobby
           </Link>
+          <Link className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-2 font-medium text-amber-100" href="/tournaments">
+            Tournaments
+          </Link>
           <Link className="rounded-lg border border-zinc-700 px-5 py-2 font-medium text-zinc-100" href="/analytics">
             Analytics
           </Link>

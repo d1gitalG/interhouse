@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AgentDetailModal } from "@/components/AgentDetailModal";
@@ -166,9 +167,22 @@ export default function AnalyticsPage() {
   return (
     <main className="min-h-screen bg-[#05070C] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-7xl space-y-8">
-        <header>
-          <p className="text-xs tracking-[0.3em] text-zinc-400">INTERHOUSE ANALYTICS</p>
-          <h1 className="text-3xl font-semibold">Performance Dashboard</h1>
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs tracking-[0.3em] text-zinc-400">INTERHOUSE ANALYTICS</p>
+            <h1 className="text-3xl font-semibold">Performance Dashboard</h1>
+          </div>
+          <nav className="flex flex-wrap gap-3">
+            <Link href="/lobby" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-100 hover:border-zinc-500">
+              Lobby
+            </Link>
+            <Link href="/tournaments" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 hover:border-amber-300/70">
+              Tournaments
+            </Link>
+            <Link href="/" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-100 hover:border-zinc-500">
+              Home
+            </Link>
+          </nav>
         </header>
 
         {error ? (

@@ -1,6 +1,6 @@
 # InterHouse - QUEUE
 
-_Last updated: 2026-03-28_
+_Last updated: 2026-04-30_
 
 > Operating note: InterHouse is now **Paperclip-operated**. Paperclip runs the active team loop (CEO / PM / Engineer / QA). This queue remains the repo-side truth mirror and should be synced to meaningful Paperclip progress, not run as a duplicate execution lane.
 
@@ -145,4 +145,95 @@ _Last updated: 2026-03-28_
   - **Status:** Match creation (/api/matches) returns 500.
   - **Root Cause:** App uses `PrismaBetterSqlite3` adapter which is incompatible with Vercel's serverless runtime.
   - **Next:** Switch to Postgres or Turso for production.
+
+- `IH-042` - `DONE` - Switch production DB from SQLite to serverless-compatible provider
+  - **DoD:** App is provisioned with a Postgres (Vercel/Neon) or Turso DB. `lib/prisma.ts` updated to handle the chosen production provider. `DATABASE_URL` set in Vercel. Match creation verified live.
+  - **Done:** Modified `lib/prisma.ts` so file-backed SQLite supplies the required Prisma v7 adapter during local production builds.
+  - **Done:** Prepared the Postgres/Neon migration path: Prisma provider switched to Postgres, runtime client switched to `@prisma/adapter-pg`, SQLite/better-sqlite3 deps removed, and `db:push` script added.
+  - **Verified 2026-04-24:** `npm run build` passes locally.
+  - **Verified 2026-04-25:** Local production build passes with a Postgres-shaped `DATABASE_URL`.
+  - **Done 2026-04-25:** Added Vercel `DATABASE_URL`, ran `npm run db:push` against Neon, redeployed production, and live-smoked match creation/join/tick successfully. Production 500 is fixed.
+
+- `IH-043` - `DONE` - Fix Vercel Gemini provider auth
+  - **DoD:** Production match tick uses provider-healthy Gemini reasoning instead of fallback reasoning.
+  - **Status:** Live APIs and match flow are up, but Gemini calls still fall back. Attempted to refresh Vercel `GEMINI_API_KEY` from local/OpenClaw config on 2026-04-26; direct Google API test says the available key is expired/invalid.
+  - **Done:** Gianni updated the Vercel key, Gemini JSON handling was tightened, production redeployed, and live match `cmog0ggbk000204l2p950qdlf` verified provider reasoning with `fallback=false`.
+
+- `IH-044` - `DONE` - Create zodiac-coded exhibition agent pod
+  - **DoD:** Production has a small set of distinctive agents generated from zodiac/persona rules, each with name, house, strategy profile, and custom prompt.
+  - **Done:** Added `ZODIAC_EXHIBITION_POD.md`, created seed/run scripts, deployed agent create/update support for custom prompts and tier, seeded 12 agents, and ran 6 BO3 live matches with `fallback=false`.
+  - **Results:** `ZODIAC_EXHIBITION_RESULTS_2026-04-26.md`.
+
+- `IH-045` - `DONE` - Improve zodiac opener diversity / match context
+  - **Finding:** Pod 001 works, but several agents converge on `ROCK` as a default first move.
+  - **DoD:** Custom prompts include sign-specific opener tendencies that produce more varied first-round behavior without invalid moves or fallback reasoning.
+  - **Done:** Upgraded the agent engine context with score, self/opponent prior moves, last-round outcome, explicit resource limits, repetition warnings, and creator/challenger symmetry advice.
+  - **Verified:** Match `cmog2kd94000004jv53sdxbmo` completed with varied moves, resource-aware reasoning, and `fallback=false`.
+
+- `IH-046` - `NEXT` - Persona distinctness polish
+  - **DoD:** Zodiac agents are not just mechanically varied; their reasoning and move choices feel clearly differentiated by archetype.
+  - **Next:** Review the latest verification match and run a small rematch set, then tune any zodiac prompts that still sound too similar.
+
+- `IH-047` - `DONE` - Add RPS rule-consistency guard
+  - **Finding:** Agents had hard RPS rules in prompt context but could still produce reasoning where the named counter did not match the chosen move.
+  - **Done:** Added explicit RPS rules, required `predictedOpponentMove`, increased Gemini output cap, and added an engine-level consistency correction: if an RPS prediction is provided and the selected move does not beat it, the engine switches to the legal counter when available.
+  - **Verified:** Match `cmog380fp000004l4d713y5ci` completed with clearer counter logic and `fallback=false`.
+
+- `IH-048` - `DONE` - Fix RPS last-round perspective and malformed JSON fallback ugliness
+  - **Finding:** Gianni caught a Round 3→4 reasoning issue where an agent reversed who won/lost the prior round. Later verification also exposed malformed Gemini JSON producing visible fallback text.
+  - **Done:** Last-round truth is now perspective-safe and prepended authoritatively to reasoning. JSON parser now extracts the first balanced object from noisy output. RPS model failures can recover with clean deterministic counter reasoning instead of exposing fallback errors.
+  - **Verified:** Match `cmog3wa8q000004l5s409cpcl` completed with correct Round 3→4 reasoning, `fallback=false`, and no engine recovery needed.
+
+- `IH-049` - `DONE` - Add deeper RPS strategy layer
+  - **Done:** Added engine-side opponent modeling: move frequencies, after-draw tendency, first-order and second-order reads, score/resource pressure, exploit warnings, and persona-biased tactical intents.
+  - **Agent output:** RPS agents now return/use `intent` and `confidence` alongside `predictedOpponentMove`; reasoning gets authoritative intent/counter context prepended.
+  - **Verified:** Match `cmog4ok3k000004l780duqdj0` completed with `fallback=false` and `recovery=false`; moves showed intents like `high-risk-read`, `anti-mirror`, and `punish-repeat`.
+  - **Follow-up:** Free-form prose can still mention alternate reads loosely; if this becomes annoying, store structured intent/confidence separately in DB/UI instead of relying only on reasoning text.
+
+- `IH-050` - `DONE` - Add persona-aware opening priors / controlled uncertainty
+  - **Done:** Replaced universal no-history ROCK prior with seeded persona-aware opener priors based on strategy profile plus name/custom prompt cues. Round 1 now gets an opening scout with weighted ROCK/PAPER/SCISSORS tendencies and a deterministic per-match seeded read.
+  - **Verified:** 5-match batch completed with `fallback=false`/`recovery=false`. Openings varied across `SCISSORS/ROCK`, `PAPER/ROCK`, `ROCK/ROCK`, and `ROCK/SCISSORS` instead of collapsing into Paper/Paper every time.
+  - **Observed:** Red Comet still wins most Red/Gilded rematches, but Gilded Blade picked up one clean win and match shapes are no longer identical.
+
+- `IH-051` - `DONE` - Run 16-agent tournament smoke
+  - **Done:** Added 4 real wildcard agents and ran a 16-agent single-elimination BO3 RPS bracket.
+  - **Verified:** 15/15 matches completed with `fallback=false` and `recovery=false`.
+  - **Champion:** The Granite Crown defeated The Twin Static in the final (`cmoga8hjl004a04l84twjhepu`).
+  - **Report:** `TOURNAMENT_RESULTS_2026-04-26_16_AGENT.md`.
+
+- `IH-052` - `DONE` - Add character layer / flaws / temperament
+  - **Done:** Added derived duelist traits (`aggression`, `discipline`, `adaptability`, `deception`, `volatility`, `composure`), archetypes, flaws, behavior bias, and short voice cues to RPS match context.
+  - **Purpose:** Make agents feel like consistent characters, not merely smarter optimizers.
+  - **Verified:** Character Cup completed with `fallback=false`; The Ember Jackal beat The Granite Crown in the final (`cmogb5s1e001004jr24oy2vc2`).
+  - **Report:** `CHARACTER_CUP_RESULTS_2026-04-26.md`.
+  - **Follow-up:** Some prose still needs tightening (`discipline discipline`, occasional long/truncated lines). Next UI step should store/display structured traits, plan, read, and flaw separately from freeform reasoning.
+
+- `IH-053` - `DONE` - Replace freeform RPS prose with engine reasoning composer
+  - **Finding:** Gianni caught Granite saying “opponent repeated SCISSORS” in Round 2 when there was only one prior round. Root cause: model/freeform prose used `repeat` loosely from `punish-repeat` intent.
+  - **Done:** Engine now composes visible RPS reasoning from validated state: `Last`, `Read`, `Plan`, and a short character action line. `punish-repeat` is displayed only when opponent actually repeated the same move across 2 prior rounds; otherwise it becomes `break-mirror` or `punish-read`.
+  - **Also fixed:** Ember Jackal was inheriting Red Comet's `Tempo` cue because the red/pressure matcher was too broad; now Ember uses `Snap`.
+  - **Verified:** Granite vs Ember rematch `cmogbsoz6000004laj9ojtc2x` completed with `fallback=false` and `badRepeat=false`.
+
+- `IH-054` - `DONE` - Run BO5 32-agent tournament
+  - **Done:** Created/seeded enough real duelists for a 32-agent field and ran a single-elimination BO5 production tournament.
+  - **Champion:** The Obsidian Choir defeated The Ashen Oracle 3-2 in the final (`cmogc88jl00cm04juc451qwce`).
+  - **Cleanliness:** 31/31 matches completed with `fallback=false` and `recovery=false`.
+  - **Report:** `TOURNAMENT_RESULTS_2026-04-26_32_AGENT_BO5.md`.
+
+- `IH-055` - `DONE` - First-class tournament prize-pool backend
+  - **Finding:** The recent BO3/BO5 brackets were ad hoc match batches using normal per-match credit settlement; champions did not receive a tournament-wide pool.
+  - **Done:** Added Tournament/TournamentEntry/TournamentMatch schema, tournament create/list/get/seed/advance/settle APIs, zero-stake bracket match creation, and idempotent winner-take-all final settlement.
+  - **Integration check 2026-04-26 20:45 EDT:** `dev.db` was backed up/restored to tracked state. Prisma schema validates and `npm run build` passes with a Postgres-shaped `DATABASE_URL`.
+  - **Migration:** Safe Postgres SQL prepared at `prisma/safe-migrations/20260427_tournament_prize_pool.postgres.sql`; full instructions in `SAFE_DB_MIGRATION_2026-04-26.md`.
+  - **Safe branch verified 2026-04-26 21:22 EDT:** Applied schema to Neon child branch `tournament-smoke-2026-04-26`, built app against that branch DB, started local server, and ran `SMOKE_BASE_URL=http://localhost:3000 npm run smoke:tournament-prize-pool`. Result: PASS (`cmogin11i000400ipxgbv0sbp`), 100-credit prize pool, winner at 1075, losers at 975, all lockedCredits 0, repeat settle idempotent.
+  - **Production verified 2026-04-27 08:16 EDT:** Production schema was pushed, compatible app code deployed to `https://interhouse-five.vercel.app`, `/api/tournaments` returned 200, and guarded production smoke passed (`cmoh5vri0000404jrm7o1ckk1`), 100-credit prize pool, winner at 1075, losers at 975, all lockedCredits 0, repeat settle idempotent.
+
+- `IH-056` - `DONE` - Read-only tournament UX / visibility slice
+  - **DoD:** Tournament list/detail states are visible and understandable from the UI, not just API/script-driven.
+  - **Done 2026-04-27:** Created `TOURNAMENT_UX_NEXT_SLICE_DECISION.md` recommending a low-risk read-only tournament list/detail UX before admin controls or the first intentional public prize-pool bracket.
+  - **Done 2026-04-30:** Implemented `/tournaments`, `/tournaments/[tournamentId]`, lobby/home entry points, and nav exits on major pages. Verified with `npm run lint` and `npm run build` using InterHouse Postgres env.
+
+- `IH-057` - `NEXT` - Minimal tournament operator/admin controls
+  - **DoD:** Trusted operator can create, seed, advance, and settle tournaments from the app behind an explicit admin/safety gate; no public unsafe write controls are exposed.
+  - **Next:** Define the minimal operator panel surface and guard strategy, then implement create/seed/advance/settle controls.
 

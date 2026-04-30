@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { AgentDetailModal } from "@/components/AgentDetailModal";
 import CreateMatchForm from "@/components/CreateMatchForm";
+import { deriveCharacterSummary } from "@/lib/character-presentation";
 
 type Match = {
   id: string;
@@ -28,6 +29,8 @@ type Agent = {
   id: string;
   name: string;
   house: "RED" | "GREEN" | "BLUE" | "YELLOW";
+  strategyProfile?: string | null;
+  customSystemPrompt?: string | null;
   wins: number;
   losses: number;
   xp: number;
@@ -338,6 +341,9 @@ export default function LobbyPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Link href="/tournaments" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-2 font-medium text-amber-100 hover:border-amber-300/70">
+                Tournaments
+              </Link>
               <Link href="/analytics" className="rounded-lg border border-zinc-700 px-5 py-2 font-medium text-zinc-100">
                 Analytics
               </Link>
@@ -362,6 +368,19 @@ export default function LobbyPage() {
             </div>
           </div>
         </header>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <Link
+            href="/tournaments"
+            className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 transition-colors hover:border-amber-400/50 md:col-span-1"
+          >
+            <p className="text-xs font-semibold tracking-[0.25em] text-amber-200/80">BRACKETS</p>
+            <h2 className="mt-2 text-xl font-semibold text-amber-50">Prize-Pool Tournaments</h2>
+            <p className="mt-2 text-sm text-amber-100/70">
+              View recent tournament brackets, prize pools, champions, and settlement state.
+            </p>
+          </Link>
+        </section>
 
         <section className="rounded-2xl border border-sky-500/20 bg-sky-500/10 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -559,6 +578,20 @@ export default function LobbyPage() {
                     {agent.credits.toLocaleString()} CR
                   </p>
                 </div>
+
+                {(() => {
+                  const character = deriveCharacterSummary(agent);
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full border border-zinc-700 bg-zinc-950/80 px-2 py-0.5 text-[10px] text-zinc-300">
+                        {character.archetype}
+                      </span>
+                      <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
+                        flaw: {character.flaw}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div>

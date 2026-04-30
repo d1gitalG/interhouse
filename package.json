@@ -10,6 +10,7 @@
     "lint": "eslint",
     "smoke:phase0": "powershell -ExecutionPolicy Bypass -File scripts/smoke-phase0.ps1",
     "smoke:core": "powershell -ExecutionPolicy Bypass -File scripts/smoke-core-flow.ps1",
+    "smoke:tournament-prize-pool": "node scripts/smoke-tournament-prize-pool.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -22,7 +23,8 @@
     "next": "16.1.6",
     "pg": "^8.20.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
