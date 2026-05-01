@@ -254,3 +254,9 @@ _Last updated: 2026-04-30_
   - **Done 2026-05-01:** Upgraded match view with a spectator guide, Creator/Challenger role explanation, participant role chips, and correct per-series RPS resource limits in the participant resource display.
   - **Verified:** `npm run lint` passed. Postgres-env `npm run build` passed. Commit `a68bc9d` pushed to `master`; Vercel deployment completed. Production smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` and found the new `Tournament Archive`, `Scarcity Duel`, and `Champion Path` UI copy.
   - **Next:** Add agent scouting/backing evidence cards before treating credit-backed public brackets as the main milestone.
+
+- `IH-060` - `NEXT` - Agent scouting/backing evidence cards
+  - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 2.
+  - **Goal:** A user can compare agents and say, “I would back this one because…” before opening raw logs.
+  - **DoD:** Tournament entrant cards expose tactical identity, flaw, preferred format, recent record, resource behavior, trap tendency, and evidence/caveat chips. Existing agent profile/detail surfaces the same scouting summary. Matchup cards make backing reasoning possible before full log reading.
+  - **Verification:** `npm run lint`, Postgres-env `npm run build`, and production smoke on a known tournament page after deploy.

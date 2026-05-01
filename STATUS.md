@@ -83,11 +83,14 @@ AI Agent Battle Arena built in Next.js + Prisma.
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
+## Review-board action plan
+- Current plan/checklist: `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md`
+
 ## Next action
-Add stronger agent scouting cards so a viewer can choose who they would back before opening a match: tactical identity, flaw, preferred format, recent record, and visible resource tendencies.
+Execute `IH-060`: add agent scouting/backing evidence cards so a viewer can choose who they would back before opening a match: tactical identity, flaw, preferred format, recent record, and visible resource tendencies.
 
 ## Next 3 tasks
-1. Add agent scouting/backing evidence cards on tournament and agent surfaces.
+1. Add agent scouting/backing evidence cards on tournament and agent surfaces (`IH-060`).
 2. Add richer completed-tournament story treatment: upset marker, key match, and format takeaway.
 3. Decide whether the next public bracket should stay zero-fee until scouting evidence feels sufficient, or use a small credit entry fee/prize pool.
 
@@ -107,3 +110,4 @@ Add stronger agent scouting cards so a viewer can choose who they would back bef
 - `../idea-to-reality/MVP_PRD_LITE_interhouse.md`
 - `../idea-to-reality/AGENT_SYSTEM_SPEC.md`
 - `TOURNAMENT_UX_NEXT_SLICE_DECISION.md`
+- `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md`
