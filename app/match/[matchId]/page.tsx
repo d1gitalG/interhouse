@@ -71,12 +71,18 @@ function getRpsMoveLimit(series: MatchDetails["series"]): number {
   return 5;
 }
 
-function getMoveUsageBefore(moves: MatchDetails["moves"], targetMove: MatchDetails["moves"][number]) {
+function getRpsCounter(move: RpsMove): RpsMove {
+  if (move === "ROCK") return "PAPER";
+  if (move === "PAPER") return "SCISSORS";
+  return "ROCK";
+}
+
+function getMoveUsageBeforeRound(moves: MatchDetails["moves"], agentId: string, round: number) {
   const usage: Record<RpsMove, number> = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
 
   for (const move of moves) {
-    if (move.id === targetMove.id) break;
-    if (move.agentId === targetMove.agentId && isRpsMove(move.move)) {
+    if (move.round >= round) continue;
+    if (move.agentId === agentId && isRpsMove(move.move)) {
       usage[move.move] += 1;
     }
   }
@@ -575,10 +581,24 @@ export default function MatchPage() {
                   const character = deriveCharacterSummary(participant.agent);
                   const beats = parseReasoningBeats(lastMove?.reasoning);
                   const resourceLimit = getRpsMoveLimit(match.series);
-                  const usageBefore = lastMove ? getMoveUsageBefore(match.moves, lastMove) : null;
+                  const usageBefore = lastMove
+                    ? getMoveUsageBeforeRound(match.moves, participant.agentId, lastMove.round)
+                    : null;
                   const desiredCounterUsage = beats.readDetail && usageBefore ? usageBefore[beats.readDetail.desiredCounter] : 0;
                   const counterWasExhausted = Boolean(
                     beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
+                  );
+                  const opponent = match.participants.find((candidate) => candidate.agentId !== participant.agentId);
+                  const chosenMove = lastMove && isRpsMove(lastMove.move) ? lastMove.move : null;
+                  const opponentBestCounter = chosenMove ? getRpsCounter(chosenMove) : null;
+                  const opponentUsageBefore = lastMove && opponent
+                    ? getMoveUsageBeforeRound(match.moves, opponent.agentId, lastMove.round)
+                    : null;
+                  const opponentCounterUsage = opponentBestCounter && opponentUsageBefore
+                    ? opponentUsageBefore[opponentBestCounter]
+                    : 0;
+                  const opponentCounterExhausted = Boolean(
+                    opponentBestCounter && opponentCounterUsage >= resourceLimit
                   );
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
@@ -631,6 +651,16 @@ export default function MatchPage() {
                             >
                               Chose: {beats.readDetail.chosen}
                             </p>
+                            {opponentCounterExhausted && opponentBestCounter ? (
+                              <>
+                                <p className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs font-medium text-fuchsia-200">
+                                  Opponent {opponentBestCounter} exhausted ({opponentCounterUsage}/{resourceLimit})
+                                </p>
+                                <p className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-200">
+                                  Resource trap
+                                </p>
+                              </>
+                            ) : null}
                           </>
                         ) : beats.read ? (
                           <p className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
@@ -697,12 +727,24 @@ export default function MatchPage() {
                 <div className="mt-4 space-y-3">
                   {match.moves.map((move) => {
                     const mover = match.participants.find((p) => p.agentId === move.agentId)?.agent;
+                    const opponent = match.participants.find((p) => p.agentId !== move.agentId);
                     const beats = parseReasoningBeats(move.reasoning);
                     const resourceLimit = getRpsMoveLimit(match.series);
-                    const usageBefore = getMoveUsageBefore(match.moves, move);
+                    const usageBefore = getMoveUsageBeforeRound(match.moves, move.agentId, move.round);
                     const desiredCounterUsage = beats.readDetail ? usageBefore[beats.readDetail.desiredCounter] : 0;
                     const counterWasExhausted = Boolean(
                       beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
+                    );
+                    const chosenMove = isRpsMove(move.move) ? move.move : null;
+                    const opponentBestCounter = chosenMove ? getRpsCounter(chosenMove) : null;
+                    const opponentUsageBefore = opponent
+                      ? getMoveUsageBeforeRound(match.moves, opponent.agentId, move.round)
+                      : null;
+                    const opponentCounterUsage = opponentBestCounter && opponentUsageBefore
+                      ? opponentUsageBefore[opponentBestCounter]
+                      : 0;
+                    const opponentCounterExhausted = Boolean(
+                      opponentBestCounter && opponentCounterUsage >= resourceLimit
                     );
 
                     return (
@@ -734,6 +776,16 @@ export default function MatchPage() {
                             >
                               Chose: {beats.readDetail.chosen}
                             </span>
+                            {opponentCounterExhausted && opponentBestCounter ? (
+                              <>
+                                <span className="rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs font-medium text-fuchsia-200">
+                                  Opponent {opponentBestCounter} exhausted ({opponentCounterUsage}/{resourceLimit})
+                                </span>
+                                <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-200">
+                                  Resource trap
+                                </span>
+                              </>
+                            ) : null}
                             {beats.plan ? (
                               <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-xs font-medium text-violet-200">
                                 Plan: {beats.plan}
