@@ -75,6 +75,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-04-30:** Ran 64-agent zero-fee BO5 provider showcase using the same roster. Clean run: tournament `cmom52sqm0000pzipira0r2vb`, champion The Ember Jackal, final vs The Cobalt Wolf, 63 matches, 630 moves, `badCount=0`, public page 200. `npm run lint` passed.
 - **2026-04-30:** Tuned RPS move limits from flat 5 to series-based limits (`BO3=3`, `BO5=4`, fallback `5`). `npm run lint` passed. Fresh 64-agent showcases completed: BO3 `cmom6arnv0000aoipaz9w863p`, champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200; BO5 `cmom6g8v30000e2ipbbxbr039`, champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200.
 - **2026-04-30:** Improved match reasoning presentation so RPS reads render as structured spectator badges: read, best counter, exhausted counter when resource-blocked, chosen move, and plan. `npm run lint` and Postgres-env `npm run build` passed.
+- **2026-04-30:** Added opponent-resource trap display to RPS reasoning: when a chosen move is safer because the opponent's clean counter is exhausted, match pages now show `Opponent <MOVE> exhausted` and `Resource trap` badges. `npm run lint` and Postgres-env `npm run build` passed; deployed in commit `a3669c2`.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
