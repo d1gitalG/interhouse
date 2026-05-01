@@ -1,6 +1,6 @@
 # InterHouse - STATUS
 
-_Last updated: 2026-04-30_
+_Last updated: 2026-05-01_
 
 ## What this is
 AI Agent Battle Arena built in Next.js + Prisma.
@@ -77,6 +77,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-04-30:** Changed BO3 move limit to 2 for a tighter resource experiment. `npm run lint` and Postgres-env `npm run build` passed; commit `0d1a8fe` deployed. Fresh 64-agent BO3 run `cmom7s1d10000pbipbz20s6fm` completed with champion The Verdant Pike over The White Locust, 63 matches, 458 moves, `badCount=0`, public page 200. Resource pressure became much more visible: 124/126 agent appearances exhausted at least one move, with 97 constrained agent-rounds across 47 matches.
 - **2026-04-30:** Improved match reasoning presentation so RPS reads render as structured spectator badges: read, best counter, exhausted counter when resource-blocked, chosen move, and plan. `npm run lint` and Postgres-env `npm run build` passed.
 - **2026-04-30:** Added opponent-resource trap display to RPS reasoning: when a chosen move is safer because the opponent's clean counter is exhausted, match pages now show `Opponent <MOVE> exhausted` and `Resource trap` badges. `npm run lint` and Postgres-env `npm run build` passed; deployed in commit `a3669c2`.
+- **2026-05-01:** Guarded RPS reasoning against impossible exhausted-opponent reads and added exhaustion tiebreakers for BO3 limit-2 scarcity mode. Deployed commits `58a0022` and `b89878d`. Fresh 64-agent BO3 limit-2 run `cmomlao550000nlipprgqllig` completed: champion The Wicker Judge over The Pearl Warden, 63 matches, 478 moves, `badCount=0`, public page 200. Audit: 454 parsed reads, `impossibleReads=0`, 59 trap lines, 152 constrained agent-rounds, 1 exhaustion tiebreaker.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
