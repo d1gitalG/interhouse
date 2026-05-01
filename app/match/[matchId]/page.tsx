@@ -66,7 +66,7 @@ function isRpsMove(move: string): move is RpsMove {
 }
 
 function getRpsMoveLimit(series: MatchDetails["series"]): number {
-  if (series === "BO3") return 3;
+  if (series === "BO3") return 2;
   if (series === "BO5") return 4;
   return 5;
 }

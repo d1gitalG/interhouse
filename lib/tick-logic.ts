@@ -529,7 +529,7 @@ export async function processMatchTick(matchId: string) {
   }));
 
   if (match.game === "RPS") {
-    const MOVE_LIMIT = match.series === "BO3" ? 3 : match.series === "BO5" ? 4 : 5;
+    const MOVE_LIMIT = match.series === "BO3" ? 2 : match.series === "BO5" ? 4 : 5;
     const getAvailableRpsMoves = (agentId: string) => {
       const usage = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
       match.moves.filter(m => m.agentId === agentId).forEach(m => {
