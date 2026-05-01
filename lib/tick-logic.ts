@@ -459,6 +459,26 @@ function formatRpsResourceStatus(params: {
   return `Your remaining move resources: ${remaining(params.selfUsage)}. Opponent remaining move resources: ${remaining(params.opponentUsage)}.`;
 }
 
+function resolveRpsExhaustionTiebreaker(params: {
+  match: MatchWithRelations;
+  p1: MatchWithRelations["participants"][number];
+  p2: MatchWithRelations["participants"][number];
+}): "P1" | "P2" {
+  if (params.p1.score !== params.p2.score) return params.p1.score > params.p2.score ? "P1" : "P2";
+
+  const rounds = [...new Set(params.match.moves.map((move) => move.round))].sort((a, b) => b - a);
+  for (const round of rounds) {
+    const p1Move = toRpsMove(params.match.moves.find((move) => move.round === round && move.agentId === params.p1.agentId)?.move ?? "");
+    const p2Move = toRpsMove(params.match.moves.find((move) => move.round === round && move.agentId === params.p2.agentId)?.move ?? "");
+    if (!p1Move || !p2Move) continue;
+    const outcome = resolveRPS(p1Move, p2Move);
+    if (outcome === "P1_WIN") return "P1";
+    if (outcome === "P2_WIN") return "P2";
+  }
+
+  return params.p1.isCreator ? "P1" : "P2";
+}
+
 function buildRpsTacticalContext(params: {
   match: MatchWithRelations;
   self: MatchWithRelations["participants"][number];
@@ -549,15 +569,20 @@ export async function processMatchTick(matchId: string) {
     const p1Resources = getAvailableRpsMoves(p1.agentId);
     const p2Resources = getAvailableRpsMoves(p2.agentId);
 
-    // If somehow both run out of all moves (shouldn't happen with 5x3=15 rounds), 
-    // but good to have a safety. 
     if (p1Resources.available.length === 0 || p2Resources.available.length === 0) {
+      const tiebreakWinner = resolveRpsExhaustionTiebreaker({ match, p1, p2 });
+      const winner = tiebreakWinner === "P1" ? p1 : p2;
+      const loser = tiebreakWinner === "P1" ? p2 : p1;
+
       return await prisma.$transaction(async (tx) => {
-        await tx.match.update({
-          where: { id: match.id },
-          data: { status: 'CANCELLED' }
+        await finalizeMatchWinner({
+          tx,
+          matchId: match.id,
+          stakeMode: match.stakeMode,
+          winnerAgentId: winner.agentId,
+          loserAgentId: loser.agentId,
         });
-        return { outcome: 'STALEMATE_EXHAUSTED', round };
+        return { outcome: `EXHAUSTION_TIEBREAKER_${tiebreakWinner}`, round };
       });
     }
 
