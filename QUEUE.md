@@ -252,5 +252,5 @@ _Last updated: 2026-04-30_
   - **Done 2026-05-01:** Added shared public format labels/explainers (`Scarcity Duel`, `Championship Series`, `Quick Clash`) and surfaced them on tournament list/detail and match pages.
   - **Done 2026-05-01:** Upgraded tournament detail with champion path, final scoreline, key resource-trap/key constraint moment, and per-match key-moment callouts.
   - **Done 2026-05-01:** Upgraded match view with a spectator guide, Creator/Challenger role explanation, participant role chips, and correct per-series RPS resource limits in the participant resource display.
-  - **Verified:** `npm run lint` passed. Postgres-env `npm run build` passed. Local Next smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` on `localhost:3101` and found the new `Tournament Archive`, `Scarcity Duel`, and `Champion Path` UI copy.
+  - **Verified:** `npm run lint` passed. Postgres-env `npm run build` passed. Commit `a68bc9d` pushed to `master`; Vercel deployment completed. Production smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` and found the new `Tournament Archive`, `Scarcity Duel`, and `Champion Path` UI copy.
   - **Next:** Add agent scouting/backing evidence cards before treating credit-backed public brackets as the main milestone.
