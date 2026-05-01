@@ -58,6 +58,32 @@ const HOUSE_COLORS: Record<House, string> = {
   YELLOW: "#CA8A04",
 };
 
+const RPS_MOVES = ["ROCK", "PAPER", "SCISSORS"] as const;
+type RpsMove = (typeof RPS_MOVES)[number];
+
+function isRpsMove(move: string): move is RpsMove {
+  return RPS_MOVES.includes(move as RpsMove);
+}
+
+function getRpsMoveLimit(series: MatchDetails["series"]): number {
+  if (series === "BO3") return 3;
+  if (series === "BO5") return 4;
+  return 5;
+}
+
+function getMoveUsageBefore(moves: MatchDetails["moves"], targetMove: MatchDetails["moves"][number]) {
+  const usage: Record<RpsMove, number> = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
+
+  for (const move of moves) {
+    if (move.id === targetMove.id) break;
+    if (move.agentId === targetMove.agentId && isRpsMove(move.move)) {
+      usage[move.move] += 1;
+    }
+  }
+
+  return usage;
+}
+
 export default function MatchPage() {
   const params = useParams<{ matchId: string }>();
   const matchId = params?.matchId ?? "";
@@ -548,6 +574,12 @@ export default function MatchPage() {
                   const isExpanded = expandedReasoning.has(participant.agentId);
                   const character = deriveCharacterSummary(participant.agent);
                   const beats = parseReasoningBeats(lastMove?.reasoning);
+                  const resourceLimit = getRpsMoveLimit(match.series);
+                  const usageBefore = lastMove ? getMoveUsageBefore(match.moves, lastMove) : null;
+                  const desiredCounterUsage = beats.readDetail && usageBefore ? usageBefore[beats.readDetail.desiredCounter] : 0;
+                  const counterWasExhausted = Boolean(
+                    beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
+                  );
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
                       <div className="flex items-start justify-between">
@@ -575,7 +607,32 @@ export default function MatchPage() {
                             Plan: {beats.plan}
                           </p>
                         ) : null}
-                        {beats.read ? (
+                        {beats.readDetail ? (
+                          <>
+                            <p className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
+                              Read: {beats.readDetail.predicted}
+                            </p>
+                            <p className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-200">
+                              Best counter: {beats.readDetail.desiredCounter}
+                            </p>
+                            {beats.readDetail.misses ? (
+                              <p className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-200">
+                                {counterWasExhausted
+                                  ? `${beats.readDetail.desiredCounter} exhausted (${desiredCounterUsage}/${resourceLimit})`
+                                  : "Counter unavailable"}
+                              </p>
+                            ) : null}
+                            <p
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium ${
+                                beats.readDetail.misses
+                                  ? "border-orange-500/40 bg-orange-500/10 text-orange-200"
+                                  : "border-teal-500/40 bg-teal-500/10 text-teal-200"
+                              }`}
+                            >
+                              Chose: {beats.readDetail.chosen}
+                            </p>
+                          </>
+                        ) : beats.read ? (
                           <p className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
                             Read: {beats.read}
                           </p>
@@ -640,12 +697,52 @@ export default function MatchPage() {
                 <div className="mt-4 space-y-3">
                   {match.moves.map((move) => {
                     const mover = match.participants.find((p) => p.agentId === move.agentId)?.agent;
+                    const beats = parseReasoningBeats(move.reasoning);
+                    const resourceLimit = getRpsMoveLimit(match.series);
+                    const usageBefore = getMoveUsageBefore(match.moves, move);
+                    const desiredCounterUsage = beats.readDetail ? usageBefore[beats.readDetail.desiredCounter] : 0;
+                    const counterWasExhausted = Boolean(
+                      beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
+                    );
+
                     return (
                       <article key={move.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
                         <p className="text-sm font-medium">
                           Round {move.round} | {mover?.name ?? move.agentId} | {move.move}
                         </p>
-                        <p className="mt-1 text-sm text-zinc-300">{move.reasoning ?? "No reasoning provided."}</p>
+                        {beats.readDetail ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
+                              Read: {beats.readDetail.predicted}
+                            </span>
+                            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-200">
+                              Best counter: {beats.readDetail.desiredCounter}
+                            </span>
+                            {beats.readDetail.misses ? (
+                              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-200">
+                                {counterWasExhausted
+                                  ? `${beats.readDetail.desiredCounter} exhausted (${desiredCounterUsage}/${resourceLimit})`
+                                  : "Counter unavailable"}
+                              </span>
+                            ) : null}
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs font-medium ${
+                                beats.readDetail.misses
+                                  ? "border-orange-500/40 bg-orange-500/10 text-orange-200"
+                                  : "border-teal-500/40 bg-teal-500/10 text-teal-200"
+                              }`}
+                            >
+                              Chose: {beats.readDetail.chosen}
+                            </span>
+                            {beats.plan ? (
+                              <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-xs font-medium text-violet-200">
+                                Plan: {beats.plan}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <p className="mt-2 text-sm text-zinc-300">{beats.action ?? move.reasoning ?? "No reasoning provided."}</p>
+                        {beats.last ? <p className="mt-1 text-xs text-zinc-500">{beats.last}</p> : null}
                       </article>
                     );
                   })}

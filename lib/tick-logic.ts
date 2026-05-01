@@ -144,10 +144,10 @@ function buildSymmetryAdvice(params: {
   const secondOrderCounter = getRpsCounter(firstOrderCounter);
 
   if (params.isCreator) {
-    return `Shared ${lastSharedMove} draw detected. As CREATOR/initiator, take the first asymmetry lane: choose the direct breaker ${firstOrderCounter}. Avoid mirroring or overthinking into ${secondOrderCounter}.`;
+    return `Shared ${lastSharedMove} draw detected. As CREATOR, take the first asymmetry lane: choose the direct breaker ${firstOrderCounter}. Avoid mirroring or overthinking into ${secondOrderCounter}.`;
   }
 
-  return `Shared ${lastSharedMove} draw detected. As CHALLENGER/responder, assume the creator's obvious break is ${firstOrderCounter}; take the counter-counter lane ${secondOrderCounter}. Avoid matching the creator's direct breaker.`;
+  return `Shared ${lastSharedMove} draw detected. As CHALLENGER, assume the creator's obvious break is ${firstOrderCounter}; take the counter-counter lane ${secondOrderCounter}. Avoid matching the creator's direct breaker.`;
 }
 
 function summarizeMoveCounts(moves: RpsMove[]): string {
@@ -529,7 +529,7 @@ export async function processMatchTick(matchId: string) {
   }));
 
   if (match.game === "RPS") {
-    const MOVE_LIMIT = 5;
+    const MOVE_LIMIT = match.series === "BO3" ? 3 : match.series === "BO5" ? 4 : 5;
     const getAvailableRpsMoves = (agentId: string) => {
       const usage = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
       match.moves.filter(m => m.agentId === agentId).forEach(m => {

@@ -7,10 +7,10 @@ AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
 - **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
-- **Phase:** Tournament visibility/operator controls deployed; agent reasoning fallback fixed; ready for next showcase bracket.
+- **Phase:** 64-agent BO3 + BO5 provider showcases complete; spectator polish is the next product slice.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
-- **Recent:** Deployed guarded `/operator/tournaments`, ran first operator bracket (`cmol3pvi4000004jyq3czpnt4`, champion The Ember Jackal), then fixed deployed agent fallback issue. Production brain smoke `cmol3zjt3000004l7nj3fw0pp` completed with 8 moves and no fallback/`INVALID_AGENT_JSON` reasoning.
+- **Recent:** Tuned RPS move limits by series (`BO3=3`, `BO5=4`, fallback `5`) and ran fresh zero-fee 64-agent showcases. BO3: `Grand 64 BO3 Provider Showcase 20260501T0027` (`cmom6arnv0000aoipaz9w863p`), champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200. BO5: `Grand 64 BO5 Provider Showcase 20260501T0031` (`cmom6g8v30000e2ipbbxbr039`), champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200. Zero-fee showcases: no prize pool or credit movement.
 - **Safe-branch smoke 2026-04-26 21:22 EDT:** Applied tournament schema to Neon child branch `tournament-smoke-2026-04-26`, built the app against that branch DB, started local Next server, and ran `SMOKE_BASE_URL=http://localhost:3000 npm run smoke:tournament-prize-pool`. Smoke passed: tournament `cmogin11i000400ipxgbv0sbp`, prize pool 100, champion paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 - **Production smoke 2026-04-27 08:16 EDT:** Production schema was pushed, compatible app code deployed, `/api/tournaments` returned 200, and guarded smoke passed against `https://interhouse-five.vercel.app`: tournament `cmoh5vri0000404jrm7o1ckk1`, prize pool 100, champion `cmoh5vrbu000204jr40goc2yz` paid 1075, losers stayed 975, all `lockedCredits=0`, repeat settle idempotency passed.
 
@@ -71,17 +71,21 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-04-26:** Added engine-side RPS reasoning composer to prevent awkward/freeform prose. Verified Granite vs Ember rematch `cmogbsoz6000004laj9ojtc2x`: `fallback=false`, no invalid Round 2 repeat language, and Ember correctly uses `Snap` instead of inheriting Red Comet's `Tempo` cue.
 - **2026-04-26:** Ran BO5 32-agent single-elimination tournament. Champion: The Obsidian Choir. Final: The Obsidian Choir defeated The Ashen Oracle 3-2 (`cmogc88jl00cm04juc451qwce`). Full report: `TOURNAMENT_RESULTS_2026-04-26_32_AGENT_BO5.md`.
 - **2026-04-26:** Added first-class tournament backend foundation: `Tournament`, `TournamentEntry`, and `TournamentMatch` Prisma models; create/list/get/seed/advance/settle API routes; zero-stake match creation for bracket matches; and idempotent winner-take-all tournament settlement. Prepared safe Postgres migration SQL and 4-agent prize-pool smoke; safe Neon child-branch migration/smoke passed.
+- **2026-04-30:** Ran 64-agent zero-fee BO3 provider showcase after seeding 32 additional named duelists. Clean run: tournament `cmom4dev70000arip673ylh2c`, champion The Rust Prophet, final vs The Green Undertaker, 63 matches, 434 moves, `badCount=0`, public page 200. Lint passed after adding `scripts/run-grand-64.ts` and Creator/Challenger wording cleanup.
+- **2026-04-30:** Ran 64-agent zero-fee BO5 provider showcase using the same roster. Clean run: tournament `cmom52sqm0000pzipira0r2vb`, champion The Ember Jackal, final vs The Cobalt Wolf, 63 matches, 630 moves, `badCount=0`, public page 200. `npm run lint` passed.
+- **2026-04-30:** Tuned RPS move limits from flat 5 to series-based limits (`BO3=3`, `BO5=4`, fallback `5`). `npm run lint` passed. Fresh 64-agent showcases completed: BO3 `cmom6arnv0000aoipaz9w863p`, champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200; BO5 `cmom6g8v30000e2ipbbxbr039`, champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200.
+- **2026-04-30:** Improved match reasoning presentation so RPS reads render as structured spectator badges: read, best counter, exhausted counter when resource-blocked, chosen move, and plan. `npm run lint` and Postgres-env `npm run build` passed.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Run the next showcase bracket now that operator controls and non-fallback agent reasoning are live.
+Add spectator polish around completed tournaments: champion card, stronger bracket recap/story, and clearer Creator/Challenger role display.
 
 ## Next 3 tasks
-1. Run a fresh 4-agent or 8-agent showcase bracket and verify public bracket/match pages show non-fallback reasoning.
-2. Add spectator polish: champion card, bracket recap, and active/completed tournament grouping.
-3. Decide whether the next public bracket should include a real credit entry fee/prize pool.
+1. Add spectator polish: champion card, bracket recap/story, active/completed grouping, and clearer Creator/Challenger display.
+2. Decide whether the next public bracket should use a real credit entry fee/prize pool.
+3. If stakes are approved, run a smaller intentional public prize-pool bracket and verify settlement + recap UX.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.

@@ -15,9 +15,17 @@ export type CharacterSummary = {
   voiceCue: string;
 };
 
+export type ReasoningReadDetail = {
+  predicted: "ROCK" | "PAPER" | "SCISSORS";
+  chosen: "ROCK" | "PAPER" | "SCISSORS";
+  desiredCounter: "ROCK" | "PAPER" | "SCISSORS";
+  misses: boolean;
+};
+
 export type ReasoningBeats = {
   last?: string;
   read?: string;
+  readDetail?: ReasoningReadDetail;
   plan?: string;
   action?: string;
 };
@@ -104,6 +112,27 @@ function cleanSentence(value?: string): string | undefined {
   return cleaned || undefined;
 }
 
+const RPS_COUNTER: Record<ReasoningReadDetail["predicted"], ReasoningReadDetail["chosen"]> = {
+  ROCK: "PAPER",
+  PAPER: "SCISSORS",
+  SCISSORS: "ROCK",
+};
+
+function parseReadDetail(read?: string): ReasoningReadDetail | undefined {
+  const hit = read?.match(/^(ROCK|PAPER|SCISSORS)\s*(?:->\s*(ROCK|PAPER|SCISSORS)|;\s*(ROCK|PAPER|SCISSORS)\s+misses)$/);
+  if (!hit) return undefined;
+
+  const predicted = hit[1] as ReasoningReadDetail["predicted"];
+  const chosen = (hit[2] ?? hit[3]) as ReasoningReadDetail["chosen"];
+
+  return {
+    predicted,
+    chosen,
+    desiredCounter: RPS_COUNTER[predicted],
+    misses: Boolean(hit[3]),
+  };
+}
+
 export function parseReasoningBeats(reasoning?: string | null): ReasoningBeats {
   if (!reasoning) return {};
 
@@ -111,10 +140,12 @@ export function parseReasoningBeats(reasoning?: string | null): ReasoningBeats {
   const read = reasoning.match(/Read:\s*([^.]*(?:->|;)[^.]*)\./)?.[1];
   const plan = reasoning.match(/Plan:\s*([^.]*)\./)?.[1];
   const action = reasoning.match(/Plan:[\s\S]*?\.\s*([^.]*(?:\.[^.]*)?)\.?$/)?.[1] ?? reasoning.split(".").slice(-2).join(".");
+  const cleanedRead = cleanSentence(read);
 
   return {
     last: cleanSentence(last),
-    read: cleanSentence(read),
+    read: cleanedRead,
+    readDetail: parseReadDetail(cleanedRead),
     plan: cleanSentence(plan),
     action: cleanSentence(action),
   };
