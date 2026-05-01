@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { buildPostMatchStory, deriveCharacterSummary, parseReasoningBeats } from "@/lib/character-presentation";
 import { createEmptyBoard, type TttBoard } from "@/lib/ttt-engine";
+import { getFormatExplainer, getPublicFormatName, getRpsCounter, getRpsMoveLimit, normalizeRpsMove, type RpsMove } from "@/lib/tournament-presentation";
 
 type House = "RED" | "GREEN" | "BLUE" | "YELLOW";
 type MatchStatus = "WAITING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
@@ -58,32 +59,14 @@ const HOUSE_COLORS: Record<House, string> = {
   YELLOW: "#CA8A04",
 };
 
-const RPS_MOVES = ["ROCK", "PAPER", "SCISSORS"] as const;
-type RpsMove = (typeof RPS_MOVES)[number];
-
-function isRpsMove(move: string): move is RpsMove {
-  return RPS_MOVES.includes(move as RpsMove);
-}
-
-function getRpsMoveLimit(series: MatchDetails["series"]): number {
-  if (series === "BO3") return 2;
-  if (series === "BO5") return 4;
-  return 5;
-}
-
-function getRpsCounter(move: RpsMove): RpsMove {
-  if (move === "ROCK") return "PAPER";
-  if (move === "PAPER") return "SCISSORS";
-  return "ROCK";
-}
-
 function getMoveUsageBeforeRound(moves: MatchDetails["moves"], agentId: string, round: number) {
   const usage: Record<RpsMove, number> = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
 
   for (const move of moves) {
     if (move.round >= round) continue;
-    if (move.agentId === agentId && isRpsMove(move.move)) {
-      usage[move.move] += 1;
+    const normalized = normalizeRpsMove(move.move);
+    if (move.agentId === agentId && normalized) {
+      usage[normalized] += 1;
     }
   }
 
@@ -250,6 +233,10 @@ export default function MatchPage() {
     return match.participants.find((p) => p.agentId === match.winnerId)?.agent ?? null;
   }, [match]);
 
+  const formatName = match ? getPublicFormatName({ game: match.game, series: match.series, entryFeeCredits: match.stakeAmount }) : "";
+  const formatExplainer = match ? getFormatExplainer({ game: match.game, series: match.series, entryFeeCredits: match.stakeAmount }) : "";
+  const rpsMoveLimit = match ? getRpsMoveLimit(match.series) : 5;
+
   const escrowStubState = useMemo(() => {
     if (!match) return [];
 
@@ -354,10 +341,15 @@ export default function MatchPage() {
                   </Link>
                 </nav>
               </div>
-              <p className="mt-3 text-sm text-zinc-300">
-                {match.series} | {match.status} | Round {match.currentRound} | {match.stakeMode}{" "}
-                {match.stakeAmount}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
+                  {formatName}
+                </span>
+                <span className="text-sm text-zinc-300">
+                  {match.series} | {match.status} | Round {match.currentRound} | {match.stakeMode} {match.stakeAmount}
+                </span>
+              </div>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">{formatExplainer}</p>
               <p className="mt-4 text-sm font-medium text-zinc-200">
                 Status: {match.status}
                 {match.status === "ACTIVE" ? " (autonomous rounds running)" : ""}
@@ -489,24 +481,54 @@ export default function MatchPage() {
               ) : null}
             </header>
 
+            {match.game === "RPS" ? (
+              <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-zinc-900/70 to-zinc-950 p-6">
+                <div className="grid gap-4 md:grid-cols-[1.2fr_1fr_1fr]">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-amber-200/80">How to read this fight</p>
+                    <h2 className="mt-2 text-xl font-semibold text-zinc-100">Watch the counters, not just the winner.</h2>
+                    <p className="mt-2 text-sm leading-6 text-zinc-300">
+                      Each agent has {rpsMoveLimit} uses of ROCK, PAPER, and SCISSORS in this format. When a clean counter hits zero, the opponent can create a protected lane.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Creator role</p>
+                    <p className="mt-2 text-sm text-zinc-300">Usually breaks mirror draws directly and sets the first pressure line.</p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Challenger role</p>
+                    <p className="mt-2 text-sm text-zinc-300">Usually looks for counter-counter pivots and punishes exhausted lanes.</p>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
             <section className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
               <h2 className="text-xl font-semibold">Participants</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {match.participants.map((participant) => {
                   const usage = resourceCounts.get(participant.agentId);
-                  const MOVE_LIMIT = 5;
+                  const MOVE_LIMIT = getRpsMoveLimit(match.series);
                   const character = deriveCharacterSummary(participant.agent);
 
                   return (
                     <article key={participant.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{participant.agent.name}</p>
-                        <span
-                          className="rounded-full px-2 py-1 text-xs font-semibold text-white"
-                          style={{ backgroundColor: HOUSE_COLORS[participant.agent.house] }}
-                        >
-                          {participant.agent.house}
-                        </span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{participant.agent.name}</p>
+                          <p className="mt-1 text-xs text-zinc-500">{participant.isCreator ? "Creator" : "Challenger"}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs font-semibold text-zinc-200">
+                            {participant.isCreator ? "Creator" : "Challenger"}
+                          </span>
+                          <span
+                            className="rounded-full px-2 py-1 text-xs font-semibold text-white"
+                            style={{ backgroundColor: HOUSE_COLORS[participant.agent.house] }}
+                          >
+                            {participant.agent.house}
+                          </span>
+                        </div>
                       </div>
                       {participant.agent.personality ? (
                         <p className="mt-2 text-xs italic text-zinc-400">&ldquo;{participant.agent.personality}&rdquo;</p>
@@ -589,7 +611,7 @@ export default function MatchPage() {
                     beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
                   );
                   const opponent = match.participants.find((candidate) => candidate.agentId !== participant.agentId);
-                  const chosenMove = lastMove && isRpsMove(lastMove.move) ? lastMove.move : null;
+                  const chosenMove = lastMove ? normalizeRpsMove(lastMove.move) : null;
                   const opponentBestCounter = chosenMove ? getRpsCounter(chosenMove) : null;
                   const opponentUsageBefore = lastMove && opponent
                     ? getMoveUsageBeforeRound(match.moves, opponent.agentId, lastMove.round)
@@ -735,7 +757,7 @@ export default function MatchPage() {
                     const counterWasExhausted = Boolean(
                       beats.readDetail?.misses && desiredCounterUsage >= resourceLimit
                     );
-                    const chosenMove = isRpsMove(move.move) ? move.move : null;
+                    const chosenMove = normalizeRpsMove(move.move);
                     const opponentBestCounter = chosenMove ? getRpsCounter(chosenMove) : null;
                     const opponentUsageBefore = opponent
                       ? getMoveUsageBeforeRound(match.moves, opponent.agentId, move.round)

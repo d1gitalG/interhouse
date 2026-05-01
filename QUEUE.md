@@ -246,3 +246,11 @@ _Last updated: 2026-04-30_
   - **Verified production 2026-04-30:** Brain smoke match `cmol3zjt3000004l7nj3fw0pp` completed with 8 moves and `badCount=0`; no fallback or `INVALID_AGENT_JSON` reasoning.
   - **Next:** Run the next showcase bracket now that provider reasoning is healthy again.
 
+
+- `IH-059` - `DONE` - Spectator legitimacy polish pass
+  - **Source:** Review-board feedback said InterHouse should make informed backing feel legitimate before pushing real-money/backing.
+  - **Done 2026-05-01:** Added shared public format labels/explainers (`Scarcity Duel`, `Championship Series`, `Quick Clash`) and surfaced them on tournament list/detail and match pages.
+  - **Done 2026-05-01:** Upgraded tournament detail with champion path, final scoreline, key resource-trap/key constraint moment, and per-match key-moment callouts.
+  - **Done 2026-05-01:** Upgraded match view with a spectator guide, Creator/Challenger role explanation, participant role chips, and correct per-series RPS resource limits in the participant resource display.
+  - **Verified:** `npm run lint` passed. Postgres-env `npm run build` passed. Local Next smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` on `localhost:3101` and found the new `Tournament Archive`, `Scarcity Duel`, and `Champion Path` UI copy.
+  - **Next:** Add agent scouting/backing evidence cards before treating credit-backed public brackets as the main milestone.

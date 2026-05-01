@@ -7,7 +7,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
 - **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
-- **Phase:** 64-agent BO3 + BO5 provider showcases complete; spectator polish is the next product slice.
+- **Phase:** Spectator legitimacy slice started: tournament and match pages now explain format names, resource pressure, champion path, role clarity, and key resource-trap moments.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
 - **Recent:** Tuned RPS move limits by series (`BO3=3`, `BO5=4`, fallback `5`) and ran fresh zero-fee 64-agent showcases. BO3: `Grand 64 BO3 Provider Showcase 20260501T0027` (`cmom6arnv0000aoipaz9w863p`), champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200. BO5: `Grand 64 BO5 Provider Showcase 20260501T0031` (`cmom6g8v30000e2ipbbxbr039`), champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200. Zero-fee showcases: no prize pool or credit movement.
@@ -78,17 +78,18 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-04-30:** Improved match reasoning presentation so RPS reads render as structured spectator badges: read, best counter, exhausted counter when resource-blocked, chosen move, and plan. `npm run lint` and Postgres-env `npm run build` passed.
 - **2026-04-30:** Added opponent-resource trap display to RPS reasoning: when a chosen move is safer because the opponent's clean counter is exhausted, match pages now show `Opponent <MOVE> exhausted` and `Resource trap` badges. `npm run lint` and Postgres-env `npm run build` passed; deployed in commit `a3669c2`.
 - **2026-05-01:** Guarded RPS reasoning against impossible exhausted-opponent reads and added exhaustion tiebreakers for BO3 limit-2 scarcity mode. Deployed commits `58a0022` and `b89878d`. Fresh 64-agent BO3 limit-2 run `cmomlao550000nlipprgqllig` completed: champion The Wicker Judge over The Pearl Warden, 63 matches, 478 moves, `badCount=0`, public page 200. Audit: 454 parsed reads, `impossibleReads=0`, 59 trap lines, 152 constrained agent-rounds, 1 exhaustion tiebreaker.
+- **2026-05-01:** Implemented first spectator-legitimacy pass from review-board feedback: shared public format labels/explainers (`Scarcity Duel`, `Championship Series`, `Quick Clash`), tournament archive context, tournament detail champion path/final/key-moment recap, RPS resource-trap highlights, match-level spectator guide, Creator/Challenger role cards, and correct per-series resource counts. `npm run lint` and Postgres-env `npm run build` passed; local smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` on `localhost:3101`.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
 
 ## Next action
-Add spectator polish around completed tournaments: champion card, stronger bracket recap/story, and clearer Creator/Challenger role display.
+Add stronger agent scouting cards so a viewer can choose who they would back before opening a match: tactical identity, flaw, preferred format, recent record, and visible resource tendencies.
 
 ## Next 3 tasks
-1. Add spectator polish: champion card, bracket recap/story, active/completed grouping, and clearer Creator/Challenger display.
-2. Decide whether the next public bracket should use a real credit entry fee/prize pool.
-3. If stakes are approved, run a smaller intentional public prize-pool bracket and verify settlement + recap UX.
+1. Add agent scouting/backing evidence cards on tournament and agent surfaces.
+2. Add richer completed-tournament story treatment: upset marker, key match, and format takeaway.
+3. Decide whether the next public bracket should stay zero-fee until scouting evidence feels sufficient, or use a small credit entry fee/prize pool.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.

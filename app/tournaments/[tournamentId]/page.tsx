@@ -2,8 +2,18 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { parseReasoningBeats } from "@/lib/character-presentation";
 import { prisma } from "@/lib/prisma";
 import { tournamentInclude } from "@/lib/tournaments";
+import {
+  getFormatExplainer,
+  getPublicFormatName,
+  getRpsCounter,
+  getRpsMoveLimit,
+  getStakeLabel,
+  normalizeRpsMove,
+  type RpsMove,
+} from "@/lib/tournament-presentation";
 
 export const dynamic = "force-dynamic";
 
@@ -50,14 +60,56 @@ function rpsRoundWinner(
   first: { agentId: string; move: string },
   second: { agentId: string; move: string },
 ) {
-  const firstMove = first.move.toUpperCase();
-  const secondMove = second.move.toUpperCase();
-  if (firstMove === secondMove) return null;
-  const firstWins =
-    (firstMove === "ROCK" && secondMove === "SCISSORS") ||
-    (firstMove === "SCISSORS" && secondMove === "PAPER") ||
-    (firstMove === "PAPER" && secondMove === "ROCK");
-  return firstWins ? first.agentId : second.agentId;
+  const firstMove = normalizeRpsMove(first.move);
+  const secondMove = normalizeRpsMove(second.move);
+  if (!firstMove || !secondMove || firstMove === secondMove) return null;
+  return getRpsCounter(secondMove) === firstMove ? first.agentId : second.agentId;
+}
+
+function getMoveUsageBeforeRound(
+  moves: TournamentMatchDetail["match"]["moves"],
+  agentId: string,
+  round: number,
+) {
+  const usage: Record<RpsMove, number> = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
+
+  for (const move of moves) {
+    const normalized = normalizeRpsMove(move.move);
+    if (move.round < round && move.agentId === agentId && normalized) {
+      usage[normalized] += 1;
+    }
+  }
+
+  return usage;
+}
+
+function findKeyMoment(tournament: TournamentDetail, tournamentMatch: TournamentMatchDetail) {
+  const match = tournamentMatch.match;
+  const resourceLimit = getRpsMoveLimit(tournament.series);
+  const sortedMoves = [...match.moves].sort((a, b) => a.round - b.round);
+
+  for (const move of sortedMoves) {
+    const mover = match.participants.find((participant) => participant.agentId === move.agentId);
+    const opponent = match.participants.find((participant) => participant.agentId !== move.agentId);
+    const chosen = normalizeRpsMove(move.move);
+    if (!mover || !opponent || !chosen) continue;
+
+    const opponentCounter = getRpsCounter(chosen);
+    const opponentUsage = getMoveUsageBeforeRound(match.moves, opponent.agentId, move.round);
+    if (opponentUsage[opponentCounter] >= resourceLimit) {
+      return `Round ${move.round}: ${mover.agent.name}'s ${chosen} became protected because ${opponent.agent.name}'s ${opponentCounter} was exhausted.`;
+    }
+
+    const beats = parseReasoningBeats(move.reasoning);
+    if (beats.readDetail?.misses) {
+      const selfUsage = getMoveUsageBeforeRound(match.moves, move.agentId, move.round);
+      if (selfUsage[beats.readDetail.desiredCounter] >= resourceLimit) {
+        return `Round ${move.round}: ${mover.agent.name} had to abandon the clean ${beats.readDetail.desiredCounter} counter and play ${beats.readDetail.chosen} instead.`;
+      }
+    }
+  }
+
+  return null;
 }
 
 function buildMatchRecap(tournament: TournamentDetail, tournamentMatch: TournamentMatchDetail) {
@@ -92,8 +144,10 @@ function buildMatchRecap(tournament: TournamentDetail, tournamentMatch: Tourname
   return {
     title: `Round ${tournamentMatch.round}, Slot ${tournamentMatch.slot}`,
     matchId: match.id,
+    round: tournamentMatch.round,
     winner,
     scoreLine,
+    keyMoment: findKeyMoment(tournament, tournamentMatch),
     roundLines,
   };
 }
@@ -126,6 +180,18 @@ export default async function TournamentDetailPage({
   const completedRecaps = tournament.matches
     .filter((item) => item.match.status === "COMPLETED")
     .map((item) => buildMatchRecap(tournament, item));
+  const championRecaps = champion ? completedRecaps.filter((recap) => recap.winner === champion) : [];
+  const championPath = championRecaps.length
+    ? championRecaps.map((recap) => `R${recap.round}`).join(" → ")
+    : "Path pending";
+  const finalRecap = completedRecaps.reduce<(typeof completedRecaps)[number] | null>(
+    (best, recap) => (!best || recap.round > best.round ? recap : best),
+    null,
+  );
+  const keyMoment = championRecaps.find((recap) => recap.keyMoment)?.keyMoment ?? completedRecaps.find((recap) => recap.keyMoment)?.keyMoment;
+  const formatName = getPublicFormatName(tournament);
+  const formatExplainer = getFormatExplainer(tournament);
+  const stakeLabel = getStakeLabel(tournament);
   const zeroStake = tournament.entryFeeCredits === 0 && tournament.prizePoolCredits === 0;
   const settlementState = tournament.settledAt
     ? `Settled ${formatDate(tournament.settledAt)}`
@@ -143,14 +209,18 @@ export default async function TournamentDetailPage({
               <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass(tournament.status)}`}>
                 {tournament.status}
               </span>
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
+                {formatName}
+              </span>
               <span className="text-xs text-zinc-500">
-                {tournament.game} / {tournament.series} / {tournament.payoutMode}
+                {tournament.game} / {tournament.series} / {tournament.payoutMode} · {stakeLabel}
               </span>
             </div>
             <h1 className="mt-3 text-3xl font-semibold">{tournament.name}</h1>
             <p className="mt-2 text-sm text-zinc-400">
               Created {formatDate(tournament.createdAt)} · Updated {formatDate(tournament.updatedAt)}
             </p>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">{formatExplainer}</p>
           </div>
           <div className="flex gap-3">
             <Link href="/tournaments" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-100">
@@ -224,7 +294,18 @@ export default async function TournamentDetailPage({
                   ? "No chips were at stake in this run — this was a zero-fee operator/showcase bracket."
                   : `${formatCredits(tournament.prizePoolCredits)} was at stake with a ${formatCredits(tournament.entryFeeCredits)} entry fee.`}
               </p>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                {keyMoment ?? "Key resource-trap moments will be highlighted here as the bracket resolves."}
+              </p>
               <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Champion Path</p>
+                  <p className="mt-1 font-semibold text-zinc-100">{championPath}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Final</p>
+                  <p className="mt-1 font-semibold text-zinc-100">{finalRecap?.scoreLine ?? "TBD"}</p>
+                </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
                   <p className="text-[10px] uppercase tracking-widest text-zinc-500">Champion</p>
                   <p className="mt-1 font-semibold text-zinc-100">{champion ?? "TBD"}</p>
@@ -258,6 +339,11 @@ export default async function TournamentDetailPage({
                         </div>
                         <p className="rounded-full border border-zinc-700 px-3 py-1 font-mono text-xs text-zinc-300">{recap.scoreLine}</p>
                       </div>
+                      {recap.keyMoment ? (
+                        <p className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm leading-6 text-rose-100">
+                          {recap.keyMoment}
+                        </p>
+                      ) : null}
                       <ul className="mt-3 space-y-1 text-sm leading-6 text-zinc-300">
                         {recap.roundLines.map((line) => (
                           <li key={line}>{line}</li>

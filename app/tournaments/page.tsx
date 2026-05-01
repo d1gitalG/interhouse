@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
+import { getFormatExplainer, getPublicFormatName, getStakeLabel } from "@/lib/tournament-presentation";
 
 export const dynamic = "force-dynamic";
 
@@ -70,9 +71,9 @@ export default async function TournamentsPage() {
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs tracking-[0.3em] text-zinc-400">INTERHOUSE TOURNAMENTS</p>
-            <h1 className="mt-2 text-3xl font-semibold">Prize-Pool Tournaments</h1>
+            <h1 className="mt-2 text-3xl font-semibold">Tournament Archive</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Read-only bracket history for recent InterHouse prize-pool tournaments.
+              Completed and active brackets with enough context to understand the format, the stakes, and why a champion earned the run.
             </p>
           </div>
           <div className="flex gap-3">
@@ -108,6 +109,8 @@ export default async function TournamentsPage() {
             {tournaments.map((tournament) => {
               const champion = getChampionName(tournament);
               const completedMatches = tournament.matches.filter((item) => item.match.status === "COMPLETED").length;
+              const formatName = getPublicFormatName(tournament);
+              const stakeLabel = getStakeLabel(tournament);
 
               return (
                 <Link
@@ -121,10 +124,14 @@ export default async function TournamentsPage() {
                         <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass(tournament.status)}`}>
                           {tournament.status}
                         </span>
+                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
+                          {formatName}
+                        </span>
                         <span className="text-xs text-zinc-500">{tournament.game} / {tournament.series}</span>
                       </div>
                       <h2 className="mt-3 text-xl font-semibold text-zinc-100">{tournament.name}</h2>
-                      <p className="mt-1 text-xs text-zinc-500">Created {formatDate(tournament.createdAt)}</p>
+                      <p className="mt-1 text-xs text-zinc-500">Created {formatDate(tournament.createdAt)} · {stakeLabel}</p>
+                      <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">{getFormatExplainer(tournament)}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4 md:min-w-[520px]">
