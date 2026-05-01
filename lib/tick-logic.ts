@@ -493,6 +493,11 @@ function buildRpsTacticalContext(params: {
     opponentRepetitionWarning: buildRepetitionWarning("Opponent", opponentPreviousMoves),
     symmetryAdvice: buildSymmetryAdvice({ rows, isCreator: params.self.isCreator }),
     characterProfile,
+    resourceUsage: {
+      moveLimit: params.moveLimit,
+      selfUsage: params.selfUsage,
+      opponentUsage: params.opponentUsage,
+    },
     strategyAnalysis: buildRpsStrategyAnalysis({
       matchId: params.match.id,
       rows,

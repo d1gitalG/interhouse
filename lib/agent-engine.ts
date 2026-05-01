@@ -36,6 +36,11 @@ export interface GameState {
       scorePressure: string;
       exploitWarning?: string;
     };
+    resourceUsage?: {
+      moveLimit: number;
+      selfUsage: Record<"ROCK" | "PAPER" | "SCISSORS", number>;
+      opponentUsage: Record<"ROCK" | "PAPER" | "SCISSORS", number>;
+    };
     characterProfile?: {
       archetype: string;
       traits: {
@@ -345,6 +350,53 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<Pa
   throw new Error(lastError || "GEMINI_REQUEST_FAILED");
 }
 
+function getOpponentAvailableRpsMoves(gameState: GameState): Array<"ROCK" | "PAPER" | "SCISSORS"> {
+  const usage = gameState.tacticalContext?.resourceUsage?.opponentUsage;
+  const limit = gameState.tacticalContext?.resourceUsage?.moveLimit;
+  if (!usage || !limit) return ["ROCK", "PAPER", "SCISSORS"];
+
+  return (["ROCK", "PAPER", "SCISSORS"] as const).filter((move) => usage[move] < limit);
+}
+
+function chooseLegalOpponentPrediction(gameState: GameState, exhaustedPrediction: "ROCK" | "PAPER" | "SCISSORS"): "ROCK" | "PAPER" | "SCISSORS" | null {
+  const legalPredictions = getOpponentAvailableRpsMoves(gameState);
+  if (legalPredictions.length === 0) return null;
+
+  const likely = normalizeRpsMove(gameState.tacticalContext?.strategyAnalysis?.likelyOpponentMove);
+  if (likely && likely !== exhaustedPrediction && legalPredictions.includes(likely)) return likely;
+
+  const lastOpponentMove = normalizeRpsMove(gameState.tacticalContext?.lastRound?.opponentMove);
+  if (lastOpponentMove && lastOpponentMove !== exhaustedPrediction && legalPredictions.includes(lastOpponentMove)) return lastOpponentMove;
+
+  return legalPredictions[0] ?? null;
+}
+
+function enforceOpponentPredictionLegality(gameState: GameState, parsed: ParsedAgentMove): ParsedAgentMove {
+  if (gameState.game !== "RPS") return parsed;
+  const predicted = normalizeRpsMove(parsed.predictedOpponentMove);
+  if (!predicted) return parsed;
+
+  const usage = gameState.tacticalContext?.resourceUsage?.opponentUsage;
+  const limit = gameState.tacticalContext?.resourceUsage?.moveLimit;
+  if (!usage || !limit || usage[predicted] < limit) return parsed;
+
+  const legalPrediction = chooseLegalOpponentPrediction(gameState, predicted);
+  if (!legalPrediction) return parsed;
+  const desiredCounter = getRpsCounter(legalPrediction);
+  const legalMove = gameState.availableMoves.includes(desiredCounter)
+    ? desiredCounter
+    : normalizeRpsMove(gameState.availableMoves[0]) ?? parsed.move;
+
+  return {
+    ...parsed,
+    move: legalMove,
+    predictedOpponentMove: legalPrediction,
+    intent: parsed.intent === "punish-repeat" ? "resource-denial" : parsed.intent ?? "resource-denial",
+    confidence: Math.max(parsed.confidence ?? 0, 0.66),
+    reasoning: `Opponent cannot play ${predicted}; read shifts to ${legalPrediction}.`,
+  };
+}
+
 function enforceRpsPredictionConsistency(gameState: GameState, parsed: ParsedAgentMove): ParsedAgentMove {
   if (gameState.game !== "RPS") return parsed;
   const predicted = normalizeRpsMove(parsed.predictedOpponentMove);
@@ -474,6 +526,14 @@ function composeRpsReasoning(gameState: GameState, parsed: ParsedAgentMove): Par
     notes.push(`Plan: ${displayIntent}${typeof parsed.confidence === "number" ? ` ${parsed.confidence.toFixed(2)}` : ""}.`);
   }
 
+  const resourceUsage = ctx?.resourceUsage;
+  if (chosen && resourceUsage) {
+    const opponentCleanCounter = getRpsCounter(chosen);
+    if (resourceUsage.opponentUsage[opponentCleanCounter] >= resourceUsage.moveLimit) {
+      notes.push(`Trap: opponent ${opponentCleanCounter} exhausted.`);
+    }
+  }
+
   notes.push(getCharacterActionLine({
     voiceCue: ctx?.characterProfile?.voiceCue,
     intent: displayIntent,
@@ -546,7 +606,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       ? await callGemini(systemPrompt, userMessage)
       : await callAnthropic(systemPrompt, userMessage);
 
-    const consistent = composeRpsReasoning(gameState, enforceMirrorAsymmetry(gameState, enforceRpsPredictionConsistency(gameState, parsed)));
+    const consistent = composeRpsReasoning(
+      gameState,
+      enforceRpsPredictionConsistency(
+        gameState,
+        enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, parsed))
+      )
+    );
 
     return {
       move: consistent.move,
@@ -559,7 +625,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
     console.error("[AGENT ENGINE ERROR]", errorMsg);
     const recoveryMove = buildDeterministicRecoveryMove(gameState);
     if (recoveryMove) {
-      const consistentRecovery = composeRpsReasoning(gameState, enforceMirrorAsymmetry(gameState, enforceRpsPredictionConsistency(gameState, recoveryMove)));
+      const consistentRecovery = composeRpsReasoning(
+        gameState,
+        enforceRpsPredictionConsistency(
+          gameState,
+          enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, recoveryMove))
+        )
+      );
       return {
         move: consistentRecovery.move,
         reasoning: consistentRecovery.reasoning,
