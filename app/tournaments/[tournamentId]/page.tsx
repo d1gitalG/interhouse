@@ -146,11 +146,159 @@ function buildMatchRecap(tournament: TournamentDetail, tournamentMatch: Tourname
     title: `Round ${tournamentMatch.round}, Slot ${tournamentMatch.slot}`,
     matchId: match.id,
     round: tournamentMatch.round,
+    slot: tournamentMatch.slot,
+    winnerId: match.winnerId,
     winner,
     scoreLine,
     keyMoment: findKeyMoment(tournament, tournamentMatch),
     roundLines,
   };
+}
+
+function entryForAgent(tournament: TournamentDetail, agentId: string | null | undefined) {
+  if (!agentId) return null;
+  return tournament.entries.find((entry) => entry.agentId === agentId) ?? null;
+}
+
+function recordLabel(agent: TournamentDetail["entries"][number]["agent"]) {
+  return `${agent.wins}-${agent.losses}`;
+}
+
+function winRate(agent: TournamentDetail["entries"][number]["agent"]) {
+  const total = agent.wins + agent.losses;
+  return total === 0 ? null : agent.wins / total;
+}
+
+function findLoserId(match: TournamentMatchDetail["match"]) {
+  if (!match.winnerId) return null;
+  return match.participants.find((participant) => participant.agentId !== match.winnerId)?.agentId ?? null;
+}
+
+function detectUpset(tournament: TournamentDetail, tournamentMatch: TournamentMatchDetail) {
+  const match = tournamentMatch.match;
+  const winnerId = match.winnerId;
+  const loserId = findLoserId(match);
+  if (!winnerId || !loserId) return null;
+
+  const winnerEntry = entryForAgent(tournament, winnerId);
+  const loserEntry = entryForAgent(tournament, loserId);
+  const winnerName = agentName(tournament, winnerId) ?? "Winner";
+  const loserName = agentName(tournament, loserId) ?? "opponent";
+
+  if (winnerEntry?.seed && loserEntry?.seed && winnerEntry.seed > loserEntry.seed) {
+    return {
+      label: `Seed upset: #${winnerEntry.seed} ${winnerName} beat #${loserEntry.seed} ${loserName}`,
+      strength: winnerEntry.seed - loserEntry.seed,
+    };
+  }
+
+  const winnerAgent = winnerEntry?.agent;
+  const loserAgent = loserEntry?.agent;
+  if (!winnerAgent || !loserAgent) return null;
+
+  const winnerRate = winRate(winnerAgent);
+  const loserRate = winRate(loserAgent);
+  const winnerGames = winnerAgent.wins + winnerAgent.losses;
+  const loserGames = loserAgent.wins + loserAgent.losses;
+  if (winnerRate === null || loserRate === null || winnerGames < 3 || loserGames < 3) return null;
+  if (winnerRate + 0.1 < loserRate && winnerAgent.wins <= loserAgent.wins) {
+    return {
+      label: `Record upset: ${winnerName} (${recordLabel(winnerAgent)}) beat ${loserName} (${recordLabel(loserAgent)})`,
+      strength: Math.max(1, Math.round((loserRate - winnerRate) * 10)),
+    };
+  }
+
+  return null;
+}
+
+function resourceTrapScore(tournament: TournamentDetail, tournamentMatch: TournamentMatchDetail) {
+  const match = tournamentMatch.match;
+  const resourceLimit = getRpsMoveLimit(tournament.series);
+  let score = 0;
+
+  for (const move of match.moves) {
+    const mover = match.participants.find((participant) => participant.agentId === move.agentId);
+    const opponent = match.participants.find((participant) => participant.agentId !== move.agentId);
+    const chosen = normalizeRpsMove(move.move);
+    if (!mover || !opponent || !chosen) continue;
+    const opponentCounter = getRpsCounter(chosen);
+    const opponentUsage = getMoveUsageBeforeRound(match.moves, opponent.agentId, move.round);
+    if (opponentUsage[opponentCounter] >= resourceLimit) score += 1;
+  }
+
+  return score;
+}
+
+type MatchRecap = ReturnType<typeof buildMatchRecap>;
+
+function chooseKeyMatch(tournament: TournamentDetail, completedRecaps: MatchRecap[]) {
+  const finalRound = Math.max(0, ...tournament.matches.map((item) => item.round));
+  const candidates = tournament.matches
+    .filter((item) => item.match.status === "COMPLETED")
+    .map((item) => {
+      const recap = completedRecaps.find((row) => row.matchId === item.matchId);
+      const upset = detectUpset(tournament, item);
+      const trapScore = resourceTrapScore(tournament, item);
+      const isFinal = item.round === finalRound;
+      const isSemi = finalRound > 1 && item.round === finalRound - 1;
+      const score = (isFinal ? 6 : 0) + (isSemi && upset ? 8 : 0) + trapScore * 3 + (upset?.strength ?? 0);
+      const reason = isFinal
+        ? "The final decided the champion and turned the bracket thesis into a result."
+        : upset
+          ? upset.label
+          : trapScore > 0
+            ? "Resource exhaustion created the clearest tactical swing of the bracket."
+            : "This match best represents the completed bracket arc.";
+
+      return { tournamentMatch: item, recap, upset, trapScore, isFinal, score, reason };
+    })
+    .filter((item): item is typeof item & { recap: MatchRecap } => Boolean(item.recap));
+
+  return candidates.sort((a, b) => b.score - a.score || b.tournamentMatch.round - a.tournamentMatch.round)[0] ?? null;
+}
+
+function buildFormatTakeaway(tournament: TournamentDetail, completedMatches: number, trapMatches: number, upsetCount: number) {
+  if (completedMatches === 0) {
+    return `${getPublicFormatName(tournament)} is set up, but the bracket needs completed matches before a real format read is available.`;
+  }
+
+  const trapShare = trapMatches / completedMatches;
+  const moveLimit = getRpsMoveLimit(tournament.series);
+  const scarcityLine = tournament.game === "RPS"
+    ? `${getPublicFormatName(tournament)} capped each RPS move at ${moveLimit} use${moveLimit === 1 ? "" : "s"}, so counter preservation mattered more as matches went long.`
+    : `${getPublicFormatName(tournament)} rewarded agents that could carry their plan across the bracket format.`;
+  const evidenceLine = trapShare >= 0.4
+    ? `${trapMatches} of ${completedMatches} completed matches showed a visible resource-trap or exhausted-counter swing.`
+    : trapMatches > 0
+      ? `${trapMatches} match${trapMatches === 1 ? "" : "es"} produced a visible resource-trap swing; most wins came from cleaner score pressure.`
+      : "The visible logs did not expose many resource traps, so the safest read is scoreboard execution over hidden intent.";
+  const upsetLine = upsetCount > 0
+    ? `${upsetCount} conservative upset marker${upsetCount === 1 ? "" : "s"} kept the bracket from following seed/order expectation.`
+    : "No conservative upset marker was detected from the available seed and record data.";
+
+  return `${scarcityLine} ${evidenceLine} ${upsetLine}`;
+}
+
+function buildAgentPath(tournament: TournamentDetail, agentId: string | null | undefined) {
+  if (!agentId) return [];
+
+  return tournament.matches
+    .filter((item) => item.match.status === "COMPLETED" && item.match.participants.some((participant) => participant.agentId === agentId))
+    .sort((a, b) => a.round - b.round || a.slot - b.slot)
+    .map((item) => {
+      const self = item.match.participants.find((participant) => participant.agentId === agentId);
+      const opponent = item.match.participants.find((participant) => participant.agentId !== agentId);
+      const won = item.match.winnerId === agentId;
+      const keyMoment = findKeyMoment(tournament, item);
+      return {
+        id: item.matchId,
+        round: item.round,
+        opponent: opponent?.agent.name ?? "TBD",
+        result: won ? "W" : "L",
+        score: self && opponent ? `${self.score}-${opponent.score}` : "score pending",
+        evidence: keyMoment ?? (won ? "Advanced on scoreboard pressure." : "Final loss / eliminated on scoreboard pressure."),
+      };
+    });
 }
 
 async function loadTournament(tournamentId: string) {
@@ -196,14 +344,24 @@ export default async function TournamentDetailPage({
     .filter((item) => item.match.status === "COMPLETED")
     .map((item) => buildMatchRecap(tournament, item));
   const championRecaps = champion ? completedRecaps.filter((recap) => recap.winner === champion) : [];
-  const championPath = championRecaps.length
-    ? championRecaps.map((recap) => `R${recap.round}`).join(" → ")
-    : "Path pending";
-  const finalRecap = completedRecaps.reduce<(typeof completedRecaps)[number] | null>(
-    (best, recap) => (!best || recap.round > best.round ? recap : best),
-    null,
-  );
-  const keyMoment = championRecaps.find((recap) => recap.keyMoment)?.keyMoment ?? completedRecaps.find((recap) => recap.keyMoment)?.keyMoment;
+  const finalRound = Math.max(0, ...tournament.matches.map((item) => item.round));
+  const finalMatch = tournament.matches.find((item) => item.round === finalRound && item.match.status === "COMPLETED") ?? null;
+  const finalRecap = completedRecaps.find((recap) => recap.matchId === finalMatch?.matchId) ?? null;
+  const runnerUpId = finalMatch ? findLoserId(finalMatch.match) : null;
+  const runnerUp = agentName(tournament, runnerUpId);
+  const championPathCards = buildAgentPath(tournament, tournament.winnerAgentId);
+  const runnerUpPathCards = buildAgentPath(tournament, runnerUpId);
+  const upsetMatches = tournament.matches
+    .filter((item) => item.match.status === "COMPLETED")
+    .map((item) => detectUpset(tournament, item))
+    .filter((item) => item !== null);
+  const trapMatches = tournament.matches.filter((item) => item.match.status === "COMPLETED" && resourceTrapScore(tournament, item) > 0).length;
+  const keyMatch = chooseKeyMatch(tournament, completedRecaps);
+  const keyMoment = keyMatch?.recap.keyMoment ?? championRecaps.find((recap) => recap.keyMoment)?.keyMoment ?? completedRecaps.find((recap) => recap.keyMoment)?.keyMoment;
+  const formatTakeaway = buildFormatTakeaway(tournament, completedMatches, trapMatches, upsetMatches.length);
+  const headlineReason = tournament.status === "COMPLETED"
+    ? formatTakeaway
+    : "This bracket is still resolving; the story read will sharpen once enough matches finish.";
   const formatName = getPublicFormatName(tournament);
   const formatExplainer = getFormatExplainer(tournament);
   const stakeLabel = getStakeLabel(tournament);
@@ -298,78 +456,153 @@ export default async function TournamentDetailPage({
         </section>
 
         <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-zinc-900/80 to-zinc-950 p-6">
-          <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+          <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
             <article className="rounded-2xl border border-amber-500/30 bg-black/30 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-amber-200/80">Tournament Recap</p>
+              <p className="text-xs uppercase tracking-[0.25em] text-amber-200/80">Why this bracket mattered</p>
               <h2 className="mt-3 text-2xl font-semibold text-zinc-100">
-                {champion ? `${champion} takes the bracket.` : "Champion not decided yet."}
+                {champion ? `${champion} won the ${formatName} by surviving the bracket's pressure points.` : "The bracket story is still forming."}
               </h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">{headlineReason}</p>
               <p className="mt-3 text-sm leading-6 text-zinc-300">
                 {zeroStake
                   ? "No chips were at stake in this run — this was a zero-fee operator/showcase bracket."
                   : `${formatCredits(tournament.prizePoolCredits)} was at stake with a ${formatCredits(tournament.entryFeeCredits)} entry fee.`}
               </p>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">
-                {keyMoment ?? "Key resource-trap moments will be highlighted here as the bracket resolves."}
-              </p>
-              <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Champion Path</p>
-                  <p className="mt-1 font-semibold text-zinc-100">{championPath}</p>
+
+              <div className="mt-5 grid gap-3 text-sm">
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-amber-200/80">Format Takeaway</p>
+                  <p className="mt-2 leading-6 text-amber-50">{formatTakeaway}</p>
                 </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Final</p>
-                  <p className="mt-1 font-semibold text-zinc-100">{finalRecap?.scoreLine ?? "TBD"}</p>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Champion</p>
-                  <p className="mt-1 font-semibold text-zinc-100">{champion ?? "TBD"}</p>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500">Completed</p>
-                  <p className="mt-1 font-mono font-semibold text-zinc-100">{completedMatches}/{tournament.matches.length}</p>
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-rose-200/80">Key Tactical Swing</p>
+                  <p className="mt-2 leading-6 text-rose-50">
+                    {keyMoment ?? "No decisive resource-trap swing is visible yet; this page avoids inventing one from thin data."}
+                  </p>
                 </div>
               </div>
             </article>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold">Match-by-match story</h2>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Auto recap</p>
-              </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Key Match</p>
+                    <h3 className="mt-2 text-lg font-semibold text-zinc-100">
+                      {keyMatch?.recap ? `${keyMatch.recap.title}: ${keyMatch.recap.winner ?? "resolved"} advanced` : "Not enough completed matches"}
+                    </h3>
+                  </div>
+                  {keyMatch?.recap ? (
+                    <Link href={`/match/${keyMatch.recap.matchId}`} className="rounded-lg border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-100 hover:text-white">
+                      Open match
+                    </Link>
+                  ) : null}
+                </div>
+                <p className="mt-3 rounded-full border border-zinc-700 px-3 py-1 font-mono text-xs text-zinc-300">
+                  {keyMatch?.recap.scoreLine ?? "Score pending"}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-zinc-300">{keyMatch?.reason ?? "Completed match evidence will select a final, upset, or resource-heavy match here."}</p>
+                <div className="mt-4 grid gap-2 text-xs text-zinc-400 sm:grid-cols-2">
+                  <p>Resource traps: <span className="text-zinc-100">{keyMatch?.trapScore ?? 0}</span></p>
+                  <p>Marker: <span className="text-zinc-100">{keyMatch?.isFinal ? "Final" : keyMatch?.upset ? "Upset" : keyMatch ? "Tactical" : "Pending"}</span></p>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-500">Upset Watch</p>
+                {upsetMatches.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {upsetMatches.slice(0, 3).map((upset) => (
+                      <p key={upset.label} className="rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm leading-6 text-sky-100">
+                        {upset.label}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm leading-6 text-zinc-300">
+                    No conservative upset marker from seed or record data. That means the bracket mostly followed visible ordering, or the data is too thin to call an upset fairly.
+                  </p>
+                )}
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Final</p>
+                    <p className="mt-1 font-semibold text-zinc-100">{finalRecap?.scoreLine ?? "TBD"}</p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Runner-up</p>
+                    <p className="mt-1 font-semibold text-zinc-100">{runnerUp ?? "TBD"}</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {[
+              { label: "Champion Path", name: champion ?? "TBD", path: championPathCards, accent: "border-amber-500/30 bg-amber-500/10 text-amber-100" },
+              { label: "Runner-up Path", name: runnerUp ?? "TBD", path: runnerUpPathCards, accent: "border-sky-500/30 bg-sky-500/10 text-sky-100" },
+            ].map((card) => (
+              <article key={card.label} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">{card.label}</p>
+                    <h3 className="mt-1 text-lg font-semibold text-zinc-100">{card.name}</h3>
+                  </div>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${card.accent}`}>{card.path.length || 0} matches</span>
+                </div>
+                {card.path.length === 0 ? (
+                  <p className="mt-4 text-sm text-zinc-400">Path evidence appears after the finalist has completed bracket matches.</p>
+                ) : (
+                  <ol className="mt-4 space-y-3">
+                    {card.path.map((step) => (
+                      <li key={step.id} className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-zinc-100">R{step.round} vs {step.opponent}</p>
+                          <span className="font-mono text-xs text-zinc-300">{step.result} {step.score}</span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-zinc-400">{step.evidence}</p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </article>
+            ))}
+          </div>
+
+          <details className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-100">Advanced match-by-match log</summary>
+            <div className="mt-4 space-y-3">
               {completedRecaps.length === 0 ? (
                 <p className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-400">
                   Completed match recaps will appear here once the bracket starts resolving.
                 </p>
               ) : (
-                <div className="grid gap-3">
-                  {completedRecaps.map((recap) => (
-                    <article key={recap.matchId} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{recap.title}</p>
-                          <Link href={`/match/${recap.matchId}`} className="mt-1 block text-sm font-semibold text-zinc-100 hover:text-white">
-                            {recap.winner ? `${recap.winner} advanced` : "Match resolved"}
-                          </Link>
-                        </div>
-                        <p className="rounded-full border border-zinc-700 px-3 py-1 font-mono text-xs text-zinc-300">{recap.scoreLine}</p>
+                completedRecaps.map((recap) => (
+                  <article key={recap.matchId} className="rounded-xl border border-zinc-800 bg-[#05070C] p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{recap.title}</p>
+                        <Link href={`/match/${recap.matchId}`} className="mt-1 block text-sm font-semibold text-zinc-100 hover:text-white">
+                          {recap.winner ? `${recap.winner} advanced` : "Match resolved"}
+                        </Link>
                       </div>
-                      {recap.keyMoment ? (
-                        <p className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm leading-6 text-rose-100">
-                          {recap.keyMoment}
-                        </p>
-                      ) : null}
-                      <ul className="mt-3 space-y-1 text-sm leading-6 text-zinc-300">
-                        {recap.roundLines.map((line) => (
-                          <li key={line}>{line}</li>
-                        ))}
-                      </ul>
-                    </article>
-                  ))}
-                </div>
+                      <p className="rounded-full border border-zinc-700 px-3 py-1 font-mono text-xs text-zinc-300">{recap.scoreLine}</p>
+                    </div>
+                    {recap.keyMoment ? (
+                      <p className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm leading-6 text-rose-100">
+                        {recap.keyMoment}
+                      </p>
+                    ) : null}
+                    <ul className="mt-3 space-y-1 text-sm leading-6 text-zinc-300">
+                      {recap.roundLines.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ))
               )}
             </div>
-          </div>
+          </details>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[360px_1fr]">

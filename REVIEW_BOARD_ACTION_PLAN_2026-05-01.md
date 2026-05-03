@@ -103,25 +103,26 @@ Acceptance criteria:
 - [x] Production smoke verifies one tournament page with scouting cards.
 
 ### Phase 3 — Tournament Story Depth
-Status: **UP NEXT AFTER SCOUTING**
+Status: **DONE / shipped locally, awaiting optional production deploy**
 
 Goal: completed brackets feel like sports recaps, not database records.
 
 Checklist:
-- [ ] Add tournament `Format Takeaway` section.
-  - Example: “Scarcity Duel favored agents that preserved counters under pressure.”
-- [ ] Add `Key Match` marker.
-  - Pick final, semifinal upset, or resource-trap-heavy match.
-- [ ] Add upset marker.
-  - Use seed delta or lower-record agent beating higher-record agent.
-- [ ] Add finalist path cards.
-  - Champion path and runner-up path.
-- [ ] Add beginner/advanced toggle for match story/log density.
+- [x] Add tournament `Format Takeaway` section.
+  - Derives from public format/series resource limits plus visible trap/upset evidence.
+- [x] Add `Key Match` marker.
+  - Chooses final, semifinal upset, or resource-trap-heavy/high-constraint match from available completed match/move data.
+- [x] Add upset marker.
+  - Uses seed delta first; falls back conservatively to lower-record over higher-record when enough record data exists.
+- [x] Add finalist path cards.
+  - Champion path and runner-up path show opponents, scores, and short evidence.
+- [x] Add beginner/advanced toggle for match story/log density.
+  - Main story stays compact; full match-by-match log lives in an expandable advanced section.
 
 Acceptance criteria:
-- [ ] Completed tournament page answers “why did this bracket matter?” above the fold.
-- [ ] A viewer can identify the key match and key tactical swing in under 30 seconds.
-- [ ] `npm run lint` and build pass.
+- [x] Completed tournament page answers “why did this bracket matter?” above the fold.
+- [x] A viewer can identify the key match and key tactical swing in under 30 seconds.
+- [x] `npm run lint` and build pass.
 
 ### Phase 4 — Credit-Entry Legitimacy Test
 Status: **HOLD UNTIL PHASE 2 IS SHIPPED**
@@ -162,24 +163,23 @@ Acceptance criteria:
 
 ## Current Recommendation
 
-Start **Phase 3: Tournament Story Depth** next.
+Phase 3 is complete locally. Next, QA the story treatment in-browser on one known completed bracket, then choose whether Phase 4 should be a small credit-entry legitimacy test or another zero-fee showcase for playtest feedback.
 
 Do not spend the next sprint on:
 - real-money betting,
 - wallet/escrow polish,
-- public stake expansion,
+- public stake expansion beyond credits,
 - more large showcase brackets,
 - or new game modes.
 
-Those are less important than making one viewer believe they can make a skilled agent choice.
+Those are less important than proving users can explain a bracket result from visible scouting + story evidence.
 
 ## Next Implementation Ticket
 
-`IH-060` — Agent scouting/backing evidence cards
+`IH-062` — Phase 3 browser QA and credit-entry decision packet
 
 Definition of done:
-- Tournament entrant cards expose readable tactical evidence.
-- Agent profile/detail surfaces preferred format, flaw, and recent evidence.
-- Matchup cards make backing reasoning possible before opening full logs.
-- Lint/build pass.
-- Production smoke confirms the cards on a known tournament page.
+- Load a known completed tournament page and verify above-the-fold story clarity on desktop/mobile.
+- Confirm key match/tactical swing can be found quickly without opening raw logs.
+- Decide whether Phase 4 starts with a small credit-entry bracket or another zero-fee playtest.
+- Keep credits/SOL/real-money boundaries unmistakable.

@@ -1,6 +1,6 @@
 # InterHouse - QUEUE
 
-_Last updated: 2026-04-30_
+_Last updated: 2026-05-03_
 
 > Operating note: InterHouse is now **Paperclip-operated**. Paperclip runs the active team loop (CEO / PM / Engineer / QA). This queue remains the repo-side truth mirror and should be synced to meaningful Paperclip progress, not run as a duplicate execution lane.
 
@@ -170,9 +170,9 @@ _Last updated: 2026-04-30_
   - **Done:** Upgraded the agent engine context with score, self/opponent prior moves, last-round outcome, explicit resource limits, repetition warnings, and creator/challenger symmetry advice.
   - **Verified:** Match `cmog2kd94000004jv53sdxbmo` completed with varied moves, resource-aware reasoning, and `fallback=false`.
 
-- `IH-046` - `NEXT` - Persona distinctness polish
+- `IH-046` - `DONE` - Persona distinctness polish
   - **DoD:** Zodiac agents are not just mechanically varied; their reasoning and move choices feel clearly differentiated by archetype.
-  - **Next:** Review the latest verification match and run a small rematch set, then tune any zodiac prompts that still sound too similar.
+  - **Done:** Superseded/completed by the follow-on RPS strategy, character layer, engine-composed reasoning, and tournament showcase passes (`IH-047` through `IH-054`). Current active InterHouse next action is `IH-060`.
 
 - `IH-047` - `DONE` - Add RPS rule-consistency guard
   - **Finding:** Agents had hard RPS rules in prompt context but could still produce reasoning where the named counter did not match the chosen move.
@@ -255,8 +255,15 @@ _Last updated: 2026-04-30_
   - **Verified:** `npm run lint` passed. Postgres-env `npm run build` passed. Commit `a68bc9d` pushed to `master`; Vercel deployment completed. Production smoke loaded `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig` and found the new `Tournament Archive`, `Scarcity Duel`, and `Champion Path` UI copy.
   - **Next:** Add agent scouting/backing evidence cards before treating credit-backed public brackets as the main milestone.
 
-- `IH-060` - `NEXT` - Agent scouting/backing evidence cards
+- `IH-060` - `DONE` - Agent scouting/backing evidence cards
   - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 2.
   - **Goal:** A user can compare agents and say, “I would back this one because…” before opening raw logs.
   - **DoD:** Tournament entrant cards expose tactical identity, flaw, preferred format, recent record, resource behavior, trap tendency, and evidence/caveat chips. Existing agent profile/detail surfaces the same scouting summary. Matchup cards make backing reasoning possible before full log reading.
   - **Verification:** `npm run lint`, Postgres-env `npm run build`, and production smoke on a known tournament page after deploy.
+
+- `IH-061` - `DONE` - Tournament story depth
+  - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 3.
+  - **Goal:** Completed brackets feel like sports recaps, not database records.
+  - **Done 2026-05-03:** Upgraded the completed-tournament recap above the fold with a “why this bracket mattered” headline, data-derived Format Takeaway, Key Match marker, conservative upset watch, finalist path cards for champion/runner-up, and an advanced match-by-match log hidden behind a native density toggle.
+  - **Privacy:** Keeps existing prompt/private-playbook protections intact; the story layer uses public match, move, seed, score, and derived scouting data only.
+  - **Verified:** `npm run lint` passed. Postgres-shaped `DATABASE_URL` `npm run build` passed.
