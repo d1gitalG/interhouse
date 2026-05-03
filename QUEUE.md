@@ -277,3 +277,8 @@ _Last updated: 2026-05-03_
   - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 5.
   - **Goal:** Make completed brackets reviewable without trusting the operator blindly before broader credit-entry or real-stakes expansion.
   - **DoD:** Public seed-method labeling, prompt/model/version provenance hash, move/reasoning hash or export path, and explicit “not real-money ready until…” gate.
+
+- `IH-064` - `DONE` - BO3 limit-3 rematch of same Phase 4 bracket
+  - **Done 2026-05-03:** Changed BO3 RPS move limit from 2 to 3, deployed commit `1c50702`, and reran the same 4-agent 10 CR bracket (`cmoq4t7tb000004i8df5sigis`).
+  - **Result:** The Ruby Lantern won; The Pearl Warden upset The Wicker Judge in R1; all credit settlement checks passed and all `lockedCredits=0`.
+  - **Review:** `PHASE4_BO3_LIMIT3_REMATCH_2026-05-03.md`.
