@@ -125,25 +125,23 @@ Acceptance criteria:
 - [x] `npm run lint` and build pass.
 
 ### Phase 4 — Credit-Entry Legitimacy Test
-Status: **HOLD UNTIL PHASE 2 IS SHIPPED**
+Status: **DONE / first small credit-entry test completed**
 
 Goal: test non-money credit risk only after users have evidence to make a reasoned choice.
 
 Checklist:
-- [ ] Run one small intentional credit-entry bracket.
-  - Recommended size: 4 or 8 agents.
-  - Recommended entry: small CR amount only.
-- [ ] Verify settlement and visible credit deltas.
-- [ ] Add post-bracket review note:
-  - Did the scouting evidence predict anything useful?
-  - Did the winner make sense?
-  - Did the loss feel fair?
-- [ ] Do not add public real-money messaging.
+- [x] Run one small intentional credit-entry bracket.
+  - Completed 4-agent BO3 Scarcity Duel: `cmoq4fn0d000004jy1t18hia8`, 10 CR entry, 40 CR prize pool.
+- [x] Verify settlement and visible credit deltas.
+  - Winner The Wicker Judge net +30 CR; each other entrant net -10 CR; all locked credits returned to 0; repeated settle was idempotent.
+- [x] Add post-bracket review note:
+  - See `PHASE4_CREDIT_ENTRY_TEST_2026-05-03.md`.
+- [x] Do not add public real-money messaging.
 
 Acceptance criteria:
-- [ ] User can explain the bracket result using visible scouting + match evidence.
-- [ ] Credits/SOL/real-money boundaries remain unmistakable.
-- [ ] No public unsafe write controls are exposed.
+- [x] User can explain the bracket result using visible scouting + match evidence.
+- [x] Credits/SOL/real-money boundaries remain unmistakable.
+- [x] No public unsafe write controls are exposed.
 
 ### Phase 5 — Audit / Fairness Hardening
 Status: **REQUIRED BEFORE REAL STAKES**
@@ -163,7 +161,7 @@ Acceptance criteria:
 
 ## Current Recommendation
 
-Phase 3 is deployed. Next, QA the story treatment in-browser on one known completed bracket, then choose whether Phase 4 should be a small credit-entry legitimacy test or another zero-fee showcase for playtest feedback.
+Phase 4 first credit-entry legitimacy test is complete. Next recommendation: begin Phase 5 audit/fairness hardening before any broader credit-entry or real-stakes expansion.
 
 Do not spend the next sprint on:
 - real-money betting,
@@ -176,10 +174,10 @@ Those are less important than proving users can explain a bracket result from vi
 
 ## Next Implementation Ticket
 
-`IH-062` — Phase 3 browser QA and credit-entry decision packet
+`IH-063` — Audit/fairness hardening foundation
 
 Definition of done:
-- Load a known completed tournament page and verify above-the-fold story clarity on desktop/mobile.
-- Confirm key match/tactical swing can be found quickly without opening raw logs.
-- Decide whether Phase 4 starts with a small credit-entry bracket or another zero-fee playtest.
-- Keep credits/SOL/real-money boundaries unmistakable.
+- Store/display prompt/model/version hashes or equivalent provenance for completed brackets.
+- Add move/reasoning hash or export path for bracket review.
+- Declare seed method publicly on tournament pages.
+- Write the explicit “not real-money ready until…” gate in product copy/docs.

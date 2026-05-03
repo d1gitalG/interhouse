@@ -6,8 +6,8 @@ _Last updated: 2026-05-03_
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live - Tournament Prize Pools Verified)
-- **Phase:** Spectator legitimacy slice advancing: tournament and match pages explain format/resource pressure, role clarity, key resource-trap moments, agent scouting/backing evidence, and deeper completed-bracket sports-recap story treatment.
+- **Status:** ACTIVE (Production Live - Phase 4 Credit Test Verified)
+- **Phase:** Phase 4 first credit-entry legitimacy test completed; next gate is audit/fairness hardening before broader credit-entry or any real-stakes expansion.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
 - **Recent:** Tuned RPS move limits by series (`BO3=3`, `BO5=4`, fallback `5`) and ran fresh zero-fee 64-agent showcases. BO3: `Grand 64 BO3 Provider Showcase 20260501T0027` (`cmom6arnv0000aoipaz9w863p`), champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200. BO5: `Grand 64 BO5 Provider Showcase 20260501T0031` (`cmom6g8v30000e2ipbbxbr039`), champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200. Zero-fee showcases: no prize pool or credit movement.
@@ -81,6 +81,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-05-01:** Implemented and deployed first spectator-legitimacy pass from review-board feedback: shared public format labels/explainers (`Scarcity Duel`, `Championship Series`, `Quick Clash`), tournament archive context, tournament detail champion path/final/key-moment recap, RPS resource-trap highlights, match-level spectator guide, Creator/Challenger role cards, and correct per-series resource counts. Commit `a68bc9d` pushed to `master`; Vercel deployment completed; production smoke passed for `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig`.
 - **2026-05-03:** Implemented and deployed IH-060 agent scouting/backing evidence slice: shared safe scouting derivation helper, tournament entry scouting cards, compact tournament matchup previews, and profile-modal scouting section. Public agent/match/tournament API responses no longer expose raw `customSystemPrompt`; only coarse private-playbook signals are derived. `npm run lint`, Postgres-shaped `DATABASE_URL` `npm run build`, and production smoke passed (`/tournaments/cmomlao550000nlipprgqllig` 200 with `Scouting card`; `/api/agents` prompt leak count 0).
 - **2026-05-03:** Implemented and deployed IH-061 / Phase 3 tournament story depth: completed tournament detail pages now answer “why this bracket mattered” above the fold, with data-derived Format Takeaway, Key Match marker, conservative upset watch, champion/runner-up finalist path cards, key tactical swing, and an advanced match-by-match log density toggle. `npm run lint`, Postgres-shaped `DATABASE_URL` `npm run build`, and production smoke passed (`/tournaments/cmomlao550000nlipprgqllig` 200 with `Why this bracket mattered`; `/api/agents` prompt leak count 0).
+- **2026-05-03:** Ran Phase 4 first small credit-entry legitimacy bracket in production: `Phase 4 Credit Legitimacy Test 20260503T1845` (`cmoq4fn0d000004jy1t18hia8`), 4 entrants, 10 CR entry, 40 CR prize pool. The Wicker Judge won over The Ruby Lantern; settlement was idempotent, winner net +30 CR, non-winners net -10 CR, all locked credits returned to 0. Review note: `PHASE4_CREDIT_ENTRY_TEST_2026-05-03.md`.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
@@ -89,12 +90,12 @@ InterHouse Production Launch (MVP+)
 - Current plan/checklist: `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md`
 
 ## Next action
-Review the Phase 3 story treatment in-browser, then decide whether to run a small intentional credit-entry bracket or keep the next public bracket zero-fee until the scouting/story evidence feels sufficient.
+Start Phase 5 audit/fairness hardening before broader credit-entry or any real-stakes expansion.
 
 ## Next 3 tasks
-1. QA a known completed tournament page for above-the-fold clarity and mobile layout.
-2. Decide whether the next public bracket should stay zero-fee until scouting evidence feels sufficient, or use a small credit entry fee/prize pool.
-3. Add audit/fairness hardening before any real-stakes expansion.
+1. Add public seed-method labeling to tournament pages.
+2. Store/display prompt/model/version provenance hashes for completed brackets.
+3. Add move/reasoning hash or export path for bracket review.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.

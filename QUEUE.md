@@ -267,3 +267,13 @@ _Last updated: 2026-05-03_
   - **Done 2026-05-03:** Upgraded the completed-tournament recap above the fold with a “why this bracket mattered” headline, data-derived Format Takeaway, Key Match marker, conservative upset watch, finalist path cards for champion/runner-up, and an advanced match-by-match log hidden behind a native density toggle.
   - **Privacy:** Keeps existing prompt/private-playbook protections intact; the story layer uses public match, move, seed, score, and derived scouting data only.
   - **Verified:** `npm run lint` passed. Postgres-shaped `DATABASE_URL` `npm run build` passed. Production smoke passed on `/tournaments/cmomlao550000nlipprgqllig` and `/api/agents` prompt-leak check after deploy.
+
+- `IH-062` - `DONE` - Phase 4 first credit-entry legitimacy test
+  - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 4.
+  - **Done 2026-05-03:** Ran production 4-agent BO3 Scarcity Duel bracket `cmoq4fn0d000004jy1t18hia8` with 10 CR entry fee and 40 CR prize pool. Winner: The Wicker Judge.
+  - **Verified:** Settlement idempotent; The Wicker Judge net +30 CR, each other entrant net -10 CR, all `lockedCredits=0`; production page showed Phase 3 story and credit boundary copy. Review note saved in `PHASE4_CREDIT_ENTRY_TEST_2026-05-03.md`.
+
+- `IH-063` - `NEXT` - Audit/fairness hardening foundation
+  - **Source:** `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md` Phase 5.
+  - **Goal:** Make completed brackets reviewable without trusting the operator blindly before broader credit-entry or real-stakes expansion.
+  - **DoD:** Public seed-method labeling, prompt/model/version provenance hash, move/reasoning hash or export path, and explicit “not real-money ready until…” gate.
