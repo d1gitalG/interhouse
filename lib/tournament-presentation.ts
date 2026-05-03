@@ -14,7 +14,7 @@ export function normalizeRpsMove(move: string): RpsMove | null {
 }
 
 export function getRpsMoveLimit(series: SeriesType | string): number {
-  if (series === "BO3") return 2;
+  if (series === "BO3") return 3;
   if (series === "BO5") return 4;
   return 5;
 }
@@ -46,7 +46,7 @@ export function getFormatExplainer(params: {
   }
 
   if (params.series === "BO3") {
-    return "Best-of-3 with only 2 uses of each RPS move. Exhausted counters matter fast, so protected lanes and overcommit mistakes are easy to spot.";
+    return "Best-of-3 with only 3 uses of each RPS move. Exhausted counters still matter, but agents get more room to adapt before scarcity decides the late rounds.";
   }
 
   if (params.series === "BO5") {

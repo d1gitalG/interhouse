@@ -180,9 +180,20 @@ type DuelistTraits = {
   composure: number;
 };
 
+type ResourceTemperament = {
+  resourceDiscipline: number;
+  counterHoarding: number;
+  trapSeeking: number;
+  offReadTolerance: number;
+  commonKnowledgeDepth: number;
+  panicWhenExhausted: number;
+  scar: string;
+};
+
 type DuelistCharacter = {
   archetype: string;
   traits: DuelistTraits;
+  resourceTemperament: ResourceTemperament;
   flaw: string;
   voiceCue: string;
   behaviorBias: string;
@@ -201,6 +212,52 @@ function tuneTraits(base: DuelistTraits, patch: Partial<DuelistTraits>): Duelist
     volatility: clampTrait(patch.volatility ?? base.volatility),
     composure: clampTrait(patch.composure ?? base.composure),
   };
+}
+
+function descriptorToTrait(value: string | undefined, fallback: number): number {
+  if (!value) return clampTrait(fallback);
+  const normalized = value.toLowerCase().trim();
+  if (normalized === "very high") return 92;
+  if (normalized === "high") return 78;
+  if (normalized === "medium") return 55;
+  if (normalized === "low") return 28;
+  if (normalized === "very low") return 12;
+  return clampTrait(fallback);
+}
+
+function extractPromptValue(text: string, label: string): string | undefined {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.match(new RegExp(`${escaped}:\\s*([^.;]+)`, "i"))?.[1]?.trim();
+}
+
+function extractPromptScar(text: string, fallback: string): string {
+  return text.match(/Intentional flaw:\s*([^.]+)/i)?.[1]?.trim() ?? fallback;
+}
+
+function buildResourceTemperament(params: {
+  prompt: string;
+  traits: DuelistTraits;
+  flaw: string;
+}): ResourceTemperament {
+  const fallbackDiscipline = params.traits.discipline;
+  const fallbackHoarding = (params.traits.discipline + params.traits.composure) / 2;
+  const fallbackTrapSeeking = (params.traits.deception + params.traits.adaptability) / 2;
+  const fallbackOffRead = (params.traits.deception + params.traits.volatility) / 2;
+  const fallbackCommonKnowledge = (params.traits.adaptability + params.traits.discipline) / 2;
+
+  return {
+    resourceDiscipline: descriptorToTrait(extractPromptValue(params.prompt, "Resource discipline"), fallbackDiscipline),
+    counterHoarding: descriptorToTrait(extractPromptValue(params.prompt, "Counter hoarding"), fallbackHoarding),
+    trapSeeking: descriptorToTrait(extractPromptValue(params.prompt, "Trap seeking"), fallbackTrapSeeking),
+    offReadTolerance: descriptorToTrait(extractPromptValue(params.prompt, "Off-read tolerance"), fallbackOffRead),
+    commonKnowledgeDepth: descriptorToTrait(extractPromptValue(params.prompt, "Common-knowledge depth"), fallbackCommonKnowledge),
+    panicWhenExhausted: clampTrait(100 - params.traits.composure),
+    scar: extractPromptScar(params.prompt, params.flaw),
+  };
+}
+
+function formatResourceTemperament(resource: ResourceTemperament): string {
+  return `resourceDiscipline ${resource.resourceDiscipline}, counterHoarding ${resource.counterHoarding}, trapSeeking ${resource.trapSeeking}, offReadTolerance ${resource.offReadTolerance}, commonKnowledgeDepth ${resource.commonKnowledgeDepth}, panicWhenExhausted ${resource.panicWhenExhausted}`;
 }
 
 function buildDuelistCharacter(agent: MatchWithRelations["participants"][number]["agent"]): DuelistCharacter {
@@ -277,7 +334,13 @@ function buildDuelistCharacter(agent: MatchWithRelations["participants"][number]
     behaviorBias = "Prefer match-point-safe, resource-denial, and low-risk answers.";
   }
 
-  return { archetype, traits, flaw, voiceCue, behaviorBias };
+  const resourceTemperament = buildResourceTemperament({
+    prompt: agent.customSystemPrompt ?? "",
+    traits,
+    flaw,
+  });
+
+  return { archetype, traits, resourceTemperament, flaw, voiceCue, behaviorBias };
 }
 
 function applyCharacterIntentBias(intents: string[], character: DuelistCharacter): string[] {
@@ -291,6 +354,13 @@ function applyCharacterIntentBias(intents: string[], character: DuelistCharacter
   if (character.traits.aggression >= 78) addFront("high-risk-read");
   if (character.traits.adaptability >= 78) addFront("anti-mirror");
   if (character.traits.composure >= 76) addFront("match-point-safe");
+
+  if (character.resourceTemperament.trapSeeking >= 74) addFront("resource-denial");
+  if (character.resourceTemperament.offReadTolerance >= 74) addFront("bluff-switch");
+  if (character.resourceTemperament.commonKnowledgeDepth >= 74) addFront("counter-counter");
+  if (character.resourceTemperament.counterHoarding >= 74) addFront("match-point-safe");
+  if (character.resourceTemperament.resourceDiscipline <= 35) addFront("high-risk-read");
+  if (character.resourceTemperament.panicWhenExhausted >= 68) addFront("bait-counter");
   return preferred;
 }
 
@@ -406,8 +476,21 @@ function buildRpsStrategyAnalysis(params: {
 
   const selfRemaining = (move: RpsMove) => params.moveLimit - params.selfUsage[move];
   const directCounter = getRpsCounter(likelyOpponentMove);
+  const protectedMoves = (["ROCK", "PAPER", "SCISSORS"] as RpsMove[]).filter((move) =>
+    selfRemaining(move) > 0 && params.opponentUsage[getRpsCounter(move)] >= params.moveLimit
+  );
   const scarceSelf = (Object.entries(params.selfUsage) as Array<[RpsMove, number]>).filter(([, used]) => params.moveLimit - used <= 1).map(([move]) => move);
   const scarceOpponent = (Object.entries(params.opponentUsage) as Array<[RpsMove, number]>).filter(([, used]) => params.moveLimit - used <= 1).map(([move]) => move);
+
+  if (protectedMoves.length > 0 && params.selfCharacter.resourceTemperament.trapSeeking >= 70 && !recommendedIntents.includes("resource-denial")) {
+    recommendedIntents.unshift("resource-denial");
+  }
+  if (selfRemaining(directCounter) <= 0 && params.selfCharacter.resourceTemperament.offReadTolerance >= 70 && !recommendedIntents.includes("bait-counter")) {
+    recommendedIntents.unshift("bait-counter");
+  }
+  if (selfRemaining(directCounter) === 1 && params.selfCharacter.resourceTemperament.counterHoarding >= 74 && !recommendedIntents.includes("match-point-safe")) {
+    recommendedIntents.unshift("match-point-safe");
+  }
 
   const selfScore = params.self.score;
   const opponentScore = params.opponent.score;
@@ -436,7 +519,7 @@ function buildRpsStrategyAnalysis(params: {
       : params.rows.length === 0
         ? `Low confidence: pick a persona opener, safe balance, or bluff. The scout is not certainty.`
         : `If opponent expects your direct counter ${directCounter}, they may counter-counter with ${getRpsCounter(directCounter)}; consider whether to bait that.` ,
-    resourcePressure: `Direct counter to likely ${likelyOpponentMove} is ${directCounter}; you have ${selfRemaining(directCounter)} ${directCounter} left. Scarce for you: ${scarceSelf.join(", ") || "none"}. Scarce for opponent: ${scarceOpponent.join(", ") || "none"}.`,
+    resourcePressure: `Direct counter to likely ${likelyOpponentMove} is ${directCounter}; you have ${selfRemaining(directCounter)} ${directCounter} left. Protected moves because opponent counters are exhausted: ${protectedMoves.join(", ") || "none"}. Scarce for you: ${scarceSelf.join(", ") || "none"}. Scarce for opponent: ${scarceOpponent.join(", ") || "none"}. Your resource DNA: ${formatResourceTemperament(params.selfCharacter.resourceTemperament)}. Scar: ${params.selfCharacter.resourceTemperament.scar}.`,
     scorePressure,
     exploitWarning: selfMoves.length >= 2 && selfMoves.at(-1) === selfMoves.at(-2)
       ? `You repeated ${selfMoves.at(-1)} twice; opponent may be setting a trap for it.`
@@ -554,7 +637,10 @@ export async function processMatchTick(matchId: string) {
   }));
 
   if (match.game === "RPS") {
-    const MOVE_LIMIT = match.series === "BO3" ? 2 : match.series === "BO5" ? 4 : 5;
+    const configuredMoveLimit = Number(process.env.INTERHOUSE_RPS_MOVE_LIMIT ?? "");
+    const MOVE_LIMIT = Number.isInteger(configuredMoveLimit) && configuredMoveLimit > 0
+      ? configuredMoveLimit
+      : match.series === "BO3" ? 3 : match.series === "BO5" ? 4 : 5;
     const getAvailableRpsMoves = (agentId: string) => {
       const usage = { ROCK: 0, PAPER: 0, SCISSORS: 0 };
       match.moves.filter(m => m.agentId === agentId).forEach(m => {
