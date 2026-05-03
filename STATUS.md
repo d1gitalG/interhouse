@@ -6,8 +6,8 @@ _Last updated: 2026-05-03_
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live - Phase 4 Credit Test Verified)
-- **Phase:** Phase 4 first credit-entry legitimacy test completed; next gate is audit/fairness hardening before broader credit-entry or any real-stakes expansion.
+- **Status:** ACTIVE (Production Live - Phase 5 Audit/Fairness Foundation Implemented Locally)
+- **Phase:** Phase 5 audit/fairness hardening foundation is implemented locally; next gate is review/deploy and deeper fairness work before broader credit-entry or any real-stakes expansion.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`
 - **Recent:** Tuned RPS move limits by series (`BO3=3`, `BO5=4`, fallback `5`) and ran fresh zero-fee 64-agent showcases. BO3: `Grand 64 BO3 Provider Showcase 20260501T0027` (`cmom6arnv0000aoipaz9w863p`), champion The Solar Crown over The Clockwork Swan, 63 matches, 422 moves, `badCount=0`, public page 200. BO5: `Grand 64 BO5 Provider Showcase 20260501T0031` (`cmom6g8v30000e2ipbbxbr039`), champion The Wicker Judge over The Far Arrow, 63 matches, 636 moves, `badCount=0`, public page 200. Zero-fee showcases: no prize pool or credit movement.
@@ -83,6 +83,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-05-03:** Implemented and deployed IH-061 / Phase 3 tournament story depth: completed tournament detail pages now answer “why this bracket mattered” above the fold, with data-derived Format Takeaway, Key Match marker, conservative upset watch, champion/runner-up finalist path cards, key tactical swing, and an advanced match-by-match log density toggle. `npm run lint`, Postgres-shaped `DATABASE_URL` `npm run build`, and production smoke passed (`/tournaments/cmomlao550000nlipprgqllig` 200 with `Why this bracket mattered`; `/api/agents` prompt leak count 0).
 - **2026-05-03:** Ran Phase 4 first small credit-entry legitimacy bracket in production: `Phase 4 Credit Legitimacy Test 20260503T1845` (`cmoq4fn0d000004jy1t18hia8`), 4 entrants, 10 CR entry, 40 CR prize pool. The Wicker Judge won over The Ruby Lantern; settlement was idempotent, winner net +30 CR, non-winners net -10 CR, all locked credits returned to 0. Review note: `PHASE4_CREDIT_ENTRY_TEST_2026-05-03.md`.
 - **2026-05-03:** Switched BO3 resource limit from 2 to 3 uses per RPS move, deployed commit `1c50702`, and ran the same 4-agent 10 CR credit bracket again: `Phase 4 Credit Test BO3 Limit 3 20260503T1856` (`cmoq4t7tb000004i8df5sigis`). The Ruby Lantern won, The Pearl Warden upset The Wicker Judge in R1, settlement was idempotent, winner net +30 CR, non-winners net -10 CR, all locked credits stayed at 0. Review note: `PHASE4_BO3_LIMIT3_REMATCH_2026-05-03.md`.
+- **2026-05-03:** Implemented Phase 5 audit/fairness hardening foundation locally: tournament detail pages now show public seed-method labeling, public prompt/model/version provenance hash, completed-bracket and move/reasoning hashes, a downloadable public-safe audit JSON endpoint at `/api/tournaments/[tournamentId]/audit`, and explicit “not real-money ready until…” gate copy. Raw `customSystemPrompt` remains excluded. `npm run lint` and Postgres-shaped `DATABASE_URL npm run build` passed. Not deployed yet.
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
@@ -91,12 +92,12 @@ InterHouse Production Launch (MVP+)
 - Current plan/checklist: `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md`
 
 ## Next action
-Start Phase 5 audit/fairness hardening before broader credit-entry or any real-stakes expansion.
+Review and deploy Phase 5 audit/fairness foundation, then continue deeper fairness work before broader credit-entry or any real-stakes expansion.
 
 ## Next 3 tasks
-1. Add public seed-method labeling to tournament pages.
-2. Store/display prompt/model/version provenance hashes for completed brackets.
-3. Add move/reasoning hash or export path for bracket review.
+1. Review/deploy Phase 5 audit/fairness foundation.
+2. Decide random/ranked/commit-reveal seeding path for future tournaments.
+3. Persist per-move provider/model/version metadata and prompt commits at decision time.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.

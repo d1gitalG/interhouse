@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { parseReasoningBeats } from "@/lib/character-presentation";
 import { buildMatchupPreview, deriveAgentScouting } from "@/lib/agent-scouting";
 import { prisma } from "@/lib/prisma";
+import { buildTournamentAudit } from "@/lib/tournament-audit";
 import { tournamentInclude } from "@/lib/tournaments";
 import {
   getFormatExplainer,
@@ -39,6 +40,10 @@ function formatCredits(value: number) {
 
 function shortId(value: string) {
   return `${value.slice(0, 8)}...`;
+}
+
+function shortHash(value: string) {
+  return `${value.slice(0, 12)}…${value.slice(-8)}`;
 }
 
 function statusClass(status: string) {
@@ -371,6 +376,7 @@ export default async function TournamentDetailPage({
     : tournament.status === "COMPLETED"
       ? "Awaiting settlement"
       : "Not ready";
+  const audit = buildTournamentAudit(tournament);
 
   return (
     <main className="min-h-screen bg-[#05070C] px-6 py-10 text-zinc-100">
@@ -453,6 +459,51 @@ export default async function TournamentDetailPage({
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-zinc-900/80 to-zinc-950 p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-4xl">
+              <p className="text-xs uppercase tracking-[0.25em] text-cyan-200/80">Public audit layer</p>
+              <h2 className="mt-2 text-2xl font-semibold">Bracket provenance & fairness review</h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                {audit.seedMethod.label}: {audit.seedMethod.detail}
+              </p>
+              <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                  <p className="uppercase tracking-widest text-zinc-500">Export hash</p>
+                  <p className="mt-2 break-all font-mono text-cyan-100">{shortHash(audit.hashes.auditExportHash)}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                  <p className="uppercase tracking-widest text-zinc-500">Completed bracket</p>
+                  <p className="mt-2 break-all font-mono text-cyan-100">{shortHash(audit.hashes.completedBracketHash)}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
+                  <p className="uppercase tracking-widest text-zinc-500">Moves / reasoning</p>
+                  <p className="mt-2 break-all font-mono text-cyan-100">{shortHash(audit.hashes.movesHash)}</p>
+                </div>
+              </div>
+              <p className="mt-4 text-xs leading-5 text-zinc-400">
+                Prompt/model provenance: {shortHash(audit.promptModelProvenance.publicPromptPolicyHash)} · {audit.promptModelProvenance.modelPolicy} Raw custom prompts are not exposed.
+              </p>
+            </div>
+            <Link
+              href={`/api/tournaments/${tournament.id}/audit`}
+              className="rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20"
+            >
+              Download audit JSON
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-red-500/25 bg-red-950/20 p-6">
+          <p className="text-xs uppercase tracking-[0.25em] text-red-200/80">Gate</p>
+          <h2 className="mt-2 text-xl font-semibold text-red-100">Not real-money ready until…</h2>
+          <ul className="mt-3 grid gap-2 text-sm leading-6 text-red-50/90 md:grid-cols-2">
+            {audit.gates.remainingRequirements.map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
         </section>
 
         <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-zinc-900/80 to-zinc-950 p-6">
@@ -607,7 +658,15 @@ export default async function TournamentDetailPage({
 
         <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-            <h2 className="text-xl font-semibold">Entries</h2>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Entries</h2>
+                <p className="mt-1 text-xs leading-5 text-zinc-400">Seed method: {audit.seedMethod.label}</p>
+              </div>
+              <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100">
+                Reviewable order
+              </span>
+            </div>
             {tournament.entries.length === 0 ? (
               <p className="mt-4 text-sm text-zinc-400">No entries have been added to this tournament.</p>
             ) : (

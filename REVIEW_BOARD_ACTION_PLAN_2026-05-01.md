@@ -144,24 +144,29 @@ Acceptance criteria:
 - [x] No public unsafe write controls are exposed.
 
 ### Phase 5 — Audit / Fairness Hardening
-Status: **REQUIRED BEFORE REAL STAKES**
+Status: **FOUNDATION IMPLEMENTED LOCALLY / STILL REQUIRED BEFORE REAL STAKES**
 
 Checklist:
-- [ ] Store/display prompt/model/version hashes.
-- [ ] Store/display move/reasoning hashes or audit export.
-- [ ] Declare bracket seed method publicly.
+- [x] Store/display prompt/model/version hashes.
+  - Implemented as public-safe provenance policy hash on tournament detail pages and audit export; raw custom prompts remain private.
+- [x] Store/display move/reasoning hashes or audit export.
+  - Tournament detail pages display completed-bracket and move/reasoning hashes; `/api/tournaments/[tournamentId]/audit` downloads reviewable JSON.
+- [x] Declare bracket seed method publicly.
+  - Current conservative label: operator / entry-order seeding.
 - [ ] Decide random/ranked/commit-reveal seeding path.
 - [ ] Add anti-spam/eligibility limits for public tournaments.
 - [ ] Decide what level of prompt visibility balances trust vs cloning risk.
 
 Acceptance criteria:
-- [ ] A completed bracket can be exported/reviewed without trusting the operator blindly.
-- [ ] Public users can see how participants were seeded.
-- [ ] The system has a written “not real-money ready until…” gate.
+- [x] A completed bracket can be exported/reviewed without trusting the operator blindly.
+- [x] Public users can see how participants were seeded.
+- [x] The system has a written “not real-money ready until…” gate.
+
+Implementation note 2026-05-03: this is a foundation, not full real-stakes readiness. Remaining requirements are now explicit in product copy: per-move provider/model/version persistence, public seed draw/ranking proof, prompt attestations without exposing private prompts, adversarial replay/dispute procedures, and legal/compliance review.
 
 ## Current Recommendation
 
-Phase 4 first credit-entry legitimacy test is complete. Next recommendation: begin Phase 5 audit/fairness hardening before any broader credit-entry or real-stakes expansion.
+Phase 5 audit/fairness foundation is implemented locally. Next recommendation: review/deploy it, then continue deeper fairness work before any broader credit-entry or real-stakes expansion.
 
 Do not spend the next sprint on:
 - real-money betting,
@@ -174,10 +179,10 @@ Those are less important than proving users can explain a bracket result from vi
 
 ## Next Implementation Ticket
 
-`IH-063` — Audit/fairness hardening foundation
+`IH-065` — Deeper audit/fairness hardening
 
 Definition of done:
-- Store/display prompt/model/version hashes or equivalent provenance for completed brackets.
-- Add move/reasoning hash or export path for bracket review.
-- Declare seed method publicly on tournament pages.
-- Write the explicit “not real-money ready until…” gate in product copy/docs.
+- Decide and implement random/ranked/commit-reveal seeding path.
+- Persist per-move provider/model/version metadata and prompt commits at decision time.
+- Design prompt commit/reveal or private review escrow without exposing private prompts.
+- Add anti-spam/eligibility limits for public tournaments.
