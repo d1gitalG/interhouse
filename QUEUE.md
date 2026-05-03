@@ -266,4 +266,4 @@ _Last updated: 2026-05-03_
   - **Goal:** Completed brackets feel like sports recaps, not database records.
   - **Done 2026-05-03:** Upgraded the completed-tournament recap above the fold with a “why this bracket mattered” headline, data-derived Format Takeaway, Key Match marker, conservative upset watch, finalist path cards for champion/runner-up, and an advanced match-by-match log hidden behind a native density toggle.
   - **Privacy:** Keeps existing prompt/private-playbook protections intact; the story layer uses public match, move, seed, score, and derived scouting data only.
-  - **Verified:** `npm run lint` passed. Postgres-shaped `DATABASE_URL` `npm run build` passed.
+  - **Verified:** `npm run lint` passed. Postgres-shaped `DATABASE_URL` `npm run build` passed. Production smoke passed on `/tournaments/cmomlao550000nlipprgqllig` and `/api/agents` prompt-leak check after deploy.

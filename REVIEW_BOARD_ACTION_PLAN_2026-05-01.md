@@ -103,7 +103,7 @@ Acceptance criteria:
 - [x] Production smoke verifies one tournament page with scouting cards.
 
 ### Phase 3 — Tournament Story Depth
-Status: **DONE / shipped locally, awaiting optional production deploy**
+Status: **DONE / deployed to production**
 
 Goal: completed brackets feel like sports recaps, not database records.
 
@@ -163,7 +163,7 @@ Acceptance criteria:
 
 ## Current Recommendation
 
-Phase 3 is complete locally. Next, QA the story treatment in-browser on one known completed bracket, then choose whether Phase 4 should be a small credit-entry legitimacy test or another zero-fee showcase for playtest feedback.
+Phase 3 is deployed. Next, QA the story treatment in-browser on one known completed bracket, then choose whether Phase 4 should be a small credit-entry legitimacy test or another zero-fee showcase for playtest feedback.
 
 Do not spend the next sprint on:
 - real-money betting,
