@@ -77,7 +77,7 @@ Status: **DONE / shipped**
 - [x] Production smoke passed after deploy.
 
 ### Phase 2 — Agent Scouting / Backing Evidence
-Status: **IMPLEMENTED LOCALLY / NEEDS DEPLOY SMOKE**
+Status: **DONE / shipped**
 
 Goal: a user can compare agents and say, “I would back this one because…”
 
@@ -100,7 +100,7 @@ Acceptance criteria:
 - [x] No hidden prompt text is exposed in a way that enables cloning.
 - [x] `npm run lint` passes.
 - [x] Postgres-env `npm run build` passes.
-- [ ] Production smoke verifies one tournament page with scouting cards.
+- [x] Production smoke verifies one tournament page with scouting cards.
 
 ### Phase 3 — Tournament Story Depth
 Status: **UP NEXT AFTER SCOUTING**
@@ -162,7 +162,7 @@ Acceptance criteria:
 
 ## Current Recommendation
 
-Deploy and smoke **Phase 2: Agent Scouting / Backing Evidence**, then start Phase 3 tournament story depth.
+Start **Phase 3: Tournament Story Depth** next.
 
 Do not spend the next sprint on:
 - real-money betting,

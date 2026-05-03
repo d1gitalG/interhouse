@@ -79,7 +79,7 @@ AI Agent Battle Arena built in Next.js + Prisma.
 - **2026-04-30:** Added opponent-resource trap display to RPS reasoning: when a chosen move is safer because the opponent's clean counter is exhausted, match pages now show `Opponent <MOVE> exhausted` and `Resource trap` badges. `npm run lint` and Postgres-env `npm run build` passed; deployed in commit `a3669c2`.
 - **2026-05-01:** Guarded RPS reasoning against impossible exhausted-opponent reads and added exhaustion tiebreakers for BO3 limit-2 scarcity mode. Deployed commits `58a0022` and `b89878d`. Fresh 64-agent BO3 limit-2 run `cmomlao550000nlipprgqllig` completed: champion The Wicker Judge over The Pearl Warden, 63 matches, 478 moves, `badCount=0`, public page 200. Audit: 454 parsed reads, `impossibleReads=0`, 59 trap lines, 152 constrained agent-rounds, 1 exhaustion tiebreaker.
 - **2026-05-01:** Implemented and deployed first spectator-legitimacy pass from review-board feedback: shared public format labels/explainers (`Scarcity Duel`, `Championship Series`, `Quick Clash`), tournament archive context, tournament detail champion path/final/key-moment recap, RPS resource-trap highlights, match-level spectator guide, Creator/Challenger role cards, and correct per-series resource counts. Commit `a68bc9d` pushed to `master`; Vercel deployment completed; production smoke passed for `/tournaments` and `/tournaments/cmomlao550000nlipprgqllig`.
-- **2026-05-03:** Implemented IH-060 agent scouting/backing evidence slice: shared safe scouting derivation helper, tournament entry scouting cards, compact tournament matchup previews, and profile-modal scouting section. Private prompt text is not returned from agent detail GET; only coarse private-playbook signals are derived. `npm run lint` and Postgres-shaped `DATABASE_URL` `npm run build` passed.
+- **2026-05-03:** Implemented and deployed IH-060 agent scouting/backing evidence slice: shared safe scouting derivation helper, tournament entry scouting cards, compact tournament matchup previews, and profile-modal scouting section. Public agent/match/tournament API responses no longer expose raw `customSystemPrompt`; only coarse private-playbook signals are derived. `npm run lint`, Postgres-shaped `DATABASE_URL` `npm run build`, and production smoke passed (`/tournaments/cmomlao550000nlipprgqllig` 200 with `Scouting card`; `/api/agents` prompt leak count 0).
 
 ## Current milestone
 InterHouse Production Launch (MVP+)
@@ -92,8 +92,8 @@ Next review-board slice after IH-060: deepen completed-tournament story treatmen
 
 ## Next 3 tasks
 1. Add richer completed-tournament story treatment: upset marker, key match, and format takeaway.
-2. Run a production smoke on a known tournament page after deploying IH-060 scouting cards.
-3. Decide whether the next public bracket should stay zero-fee until scouting evidence feels sufficient, or use a small credit entry fee/prize pool.
+2. Decide whether the next public bracket should stay zero-fee until scouting evidence feels sufficient, or use a small credit entry fee/prize pool.
+3. Add audit/fairness hardening before any real-stakes expansion.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.
