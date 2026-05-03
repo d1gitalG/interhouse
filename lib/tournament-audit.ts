@@ -8,7 +8,7 @@ export const AGENT_ENGINE_PROVENANCE_VERSION = "interhouse-agent-engine-phase5-p
 
 const PUBLIC_PROMPT_POLICY_DESCRIPTOR = {
   version: AGENT_ENGINE_PROVENANCE_VERSION,
-  privacy: "raw customSystemPrompt and private prompt text are excluded from public audit exports",
+  privacy: "raw private agent prompt text is excluded from public audit exports",
   basePolicy: "InterHouse arena agent move policy with strategy profile, tier tools, public tactical context, RPS rules, resource limits, and short public reasoning",
   strategyProfiles: ["AGGRESSIVE", "DEFENSIVE", "CHAOTIC", "CALCULATED", "ADAPTIVE"],
   tierToolPolicy: {
@@ -142,7 +142,7 @@ export function buildTournamentAudit(tournament: AuditableTournament) {
     agentEngineVersion: AGENT_ENGINE_PROVENANCE_VERSION,
     modelPolicy: "Gemini when GEMINI_API_KEY is configured using GEMINI_MODEL or gemini fallback candidates; otherwise Anthropic claude-sonnet-4-5. Exact per-move provider response metadata is not persisted yet.",
     publicPromptPolicyHash: publicSha256(PUBLIC_PROMPT_POLICY_DESCRIPTOR),
-    customPromptPrivacy: "Agent customSystemPrompt values are intentionally not exported or hashed raw; future real-stakes mode needs private review escrow or commit/reveal prompt attestations.",
+    customPromptPrivacy: "Agent private prompt text is intentionally not exported or hashed raw; future real-stakes mode needs private review escrow or commit/reveal prompt attestations.",
   };
   const movesHash = publicSha256(matches.flatMap((match) => match.moves));
   const completedBracketHash = publicSha256(matches.filter((match) => match.status === "COMPLETED"));
