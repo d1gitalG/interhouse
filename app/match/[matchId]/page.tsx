@@ -34,7 +34,6 @@ type MatchDetails = {
       personality?: string | null;
       strategy?: string | null;
       strategyProfile?: string | null;
-      customSystemPrompt?: string | null;
     };
   }>;
   moves: Array<{

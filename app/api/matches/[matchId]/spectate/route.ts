@@ -1,17 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 const MATCH_INCLUDE = {
   participants: { 
     include: { 
       agent: {
-        select: {
-          id: true,
-          name: true,
-          house: true,
-          credits: true,
-          strategyProfile: true,
-          customSystemPrompt: true,
-        }
+        select: publicAgentSelect
       }
     } 
   },

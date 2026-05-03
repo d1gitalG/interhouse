@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 import { processMatchTick } from "@/lib/tick-logic";
 
 const MATCH_INCLUDE = {
-  participants: { include: { agent: true } },
+  participants: { include: { agent: { select: publicAgentSelect } } },
   moves: { orderBy: { createdAt: "asc" as const } },
 } as const;
 

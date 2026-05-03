@@ -2,6 +2,26 @@
 
 import { useEffect, useState } from "react";
 
+type AgentScouting = {
+  headline: string;
+  tacticalIdentity: string;
+  likelyFlaw: string;
+  preferredFormat: string;
+  resourceDiscipline: string;
+  trapTendency: string;
+  offReadTolerance: string;
+  caveat: string;
+  confidence: "LOW" | "MEDIUM" | "HIGH";
+  lowData: boolean;
+  recordLine: string;
+  winRateLabel: string;
+  profileSignals: string[];
+  promptSignals: string[];
+  backingEvidence: string[];
+  recentMatches: { id: string; label: string; result: "WIN" | "LOSS" | "PENDING"; scoreLine: string }[];
+  tournamentHistory: string[];
+};
+
 type Agent = {
   id: string;
   name: string;
@@ -14,6 +34,7 @@ type Agent = {
   credits: number;
   lockedCredits: number;
   createdAt: string;
+  scouting?: AgentScouting;
 };
 
 type AgentDetailProps = {
@@ -85,7 +106,7 @@ export function AgentDetailModal({ agentId, onClose, onDeleted }: AgentDetailPro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <div 
-        className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-zinc-800 bg-[#0A0C14] shadow-2xl"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-zinc-800 bg-[#0A0C14] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Background Glow */}
@@ -159,6 +180,64 @@ export function AgentDetailModal({ agentId, onClose, onDeleted }: AgentDetailPro
               <p className="text-[10px] font-bold tracking-widest text-zinc-500">HISTORY</p>
               <p className="mt-2 text-xs text-zinc-400">Created {new Date(agent.createdAt).toLocaleDateString()}</p>
             </div>
+
+            {agent.scouting ? (
+              <section className="mt-6 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold tracking-widest text-sky-200/80">SCOUTING</p>
+                  <span className="rounded-full border border-sky-400/30 px-2 py-0.5 text-[10px] font-bold text-sky-100">
+                    {agent.scouting.confidence} CONFIDENCE
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-sky-50">{agent.scouting.headline}</p>
+                {agent.scouting.lowData ? (
+                  <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+                    Low-data state: this card explains available evidence without pretending to predict the matchup.
+                  </p>
+                ) : null}
+
+                <div className="mt-4 grid gap-3 text-xs text-zinc-300">
+                  <div className="grid gap-2 rounded-xl border border-zinc-800 bg-black/20 p-3 leading-5">
+                    <p><span className="font-bold text-zinc-500">Identity:</span> {agent.scouting.tacticalIdentity}</p>
+                    <p><span className="font-bold text-zinc-500">Watch-out flaw:</span> {agent.scouting.likelyFlaw}</p>
+                    <p><span className="font-bold text-zinc-500">Best in:</span> {agent.scouting.preferredFormat}</p>
+                    <p><span className="font-bold text-zinc-500">Resources:</span> {agent.scouting.resourceDiscipline}</p>
+                    <p><span className="font-bold text-zinc-500">Trap tendency:</span> {agent.scouting.trapTendency}</p>
+                    <p><span className="font-bold text-zinc-500">Off-read tolerance:</span> {agent.scouting.offReadTolerance}</p>
+                    <p><span className="font-bold text-zinc-500">Caveat:</span> {agent.scouting.caveat}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold tracking-widest text-zinc-500">PROFILE SIGNALS</p>
+                    <ul className="mt-2 space-y-1 leading-5">
+                      {agent.scouting.profileSignals.slice(0, 3).map((signal) => <li key={signal}>• {signal}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-bold tracking-widest text-zinc-500">PRIVATE PLAYBOOK SIGNALS</p>
+                    <ul className="mt-2 space-y-1 leading-5">
+                      {agent.scouting.promptSignals.map((signal) => <li key={signal}>• {signal}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-bold tracking-widest text-zinc-500">BACKING EVIDENCE</p>
+                    <ul className="mt-2 space-y-1 leading-5">
+                      {agent.scouting.backingEvidence.map((signal) => <li key={signal}>• {signal}</li>)}
+                    </ul>
+                  </div>
+                </div>
+
+                {agent.scouting.recentMatches.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-zinc-800 bg-black/20 p-3 text-xs text-zinc-300">
+                    <p className="font-bold tracking-widest text-zinc-500">RECENT MATCHES</p>
+                    <div className="mt-2 space-y-1 leading-5">
+                      {agent.scouting.recentMatches.map((match) => (
+                        <p key={match.id}>{match.result}: {match.label} — {match.scoreLine}</p>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             <div className="mt-8 flex flex-col gap-3">
               <button 

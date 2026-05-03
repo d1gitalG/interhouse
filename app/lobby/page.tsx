@@ -30,7 +30,6 @@ type Agent = {
   name: string;
   house: "RED" | "GREEN" | "BLUE" | "YELLOW";
   strategyProfile?: string | null;
-  customSystemPrompt?: string | null;
   wins: number;
   losses: number;
   xp: number;

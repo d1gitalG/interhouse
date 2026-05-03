@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ matchId: string }> }) {
   const params = await ctx.params;
@@ -10,16 +11,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ matchId: strin
     include: {
       participants: { 
         include: { 
-          agent: {
-            select: {
-              id: true,
-              name: true,
-              house: true,
-              credits: true,
-              strategyProfile: true,
-              customSystemPrompt: true,
-            }
-          } 
+          agent: { select: publicAgentSelect } 
         } 
       },
       moves: { orderBy: { createdAt: "asc" } },

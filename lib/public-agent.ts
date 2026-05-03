@@ -1,0 +1,18 @@
+export const publicAgentSelect = {
+  id: true,
+  nftMint: true,
+  name: true,
+  house: true,
+  strategyProfile: true,
+  tier: true,
+  xp: true,
+  wins: true,
+  losses: true,
+  credits: true,
+  lockedCredits: true,
+  starterGranted: true,
+  toolsEnabled: true,
+  ownerId: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;

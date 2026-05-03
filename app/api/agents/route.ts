@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { ensureStarterCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 const HouseSchema = z.enum(["RED", "GREEN", "BLUE", "YELLOW"]);
 const StrategySchema = z.enum(["AGGRESSIVE", "DEFENSIVE", "CHAOTIC", "CALCULATED", "ADAPTIVE"]);
@@ -23,6 +24,7 @@ const CreateAgentSchema = z.object({
 
 export async function GET() {
   const agents = await prisma.agentProfile.findMany({
+    select: publicAgentSelect,
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ agents });
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
 
     return tx.agentProfile.findUnique({
       where: { id: created.id },
+      select: publicAgentSelect,
     });
   });
 

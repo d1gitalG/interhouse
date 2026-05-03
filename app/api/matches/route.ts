@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { assertAgentHasCredits, ensureStarterCredits, lockMatchStakeCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 const GameSchema = z.enum(["RPS", "TTT", "C4", "CHESS", "CHECKERS"]);
 const MatchStatusSchema = z.enum(["WAITING", "ACTIVE", "COMPLETED", "CANCELLED"]);
@@ -50,7 +51,7 @@ export async function GET(req: Request) {
   const matches = await prisma.match.findMany({
     where,
     include: {
-      participants: { include: { agent: true } },
+      participants: { include: { agent: { select: publicAgentSelect } } },
       moves: true,
     },
     orderBy: { createdAt: "desc" },
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
             : undefined,
         },
         include: {
-          participants: { include: { agent: true } },
+          participants: { include: { agent: { select: publicAgentSelect } } },
         },
       });
 
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
       return tx.match.findUnique({
         where: { id: created.id },
         include: {
-          participants: { include: { agent: true } },
+          participants: { include: { agent: { select: publicAgentSelect } } },
         },
       });
     });

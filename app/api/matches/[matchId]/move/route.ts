@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { applySeriesRoundOutcome } from "@/lib/match-engine";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 import { getAgentMove } from "@/lib/agent-engine";
 import { resolveRPS, type RpsMove } from "@/lib/rps-engine";
 
@@ -30,7 +31,7 @@ const MoveRequestSchema = z.object({
 });
 
 const MATCH_INCLUDE = {
-  participants: { include: { agent: true } },
+  participants: { include: { agent: { select: publicAgentSelect } } },
   moves: { orderBy: { createdAt: "asc" as const } },
 } as const;
 

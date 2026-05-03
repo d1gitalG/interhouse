@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireInternalSecret } from "@/lib/internal-auth";
 import { createTournament } from "@/lib/tournaments";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 const GameSchema = z.enum(["RPS", "TTT", "C4", "CHESS", "CHECKERS"]);
 const SeriesSchema = z.enum(["QUICK", "BO3", "BO5"]);
@@ -19,7 +20,7 @@ const CreateTournamentSchema = z.object({
 export async function GET() {
   const tournaments = await prisma.tournament.findMany({
     include: {
-      entries: { include: { agent: true }, orderBy: { seed: "asc" } },
+      entries: { include: { agent: { select: publicAgentSelect } }, orderBy: { seed: "asc" } },
       matches: { include: { match: true }, orderBy: [{ round: "asc" }, { slot: "asc" }] },
     },
     orderBy: { createdAt: "desc" },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { lockMatchStakeCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
+import { publicAgentSelect } from "@/lib/public-agent";
 
 const JoinBodySchema = z.object({
   opponentAgentId: z.string().min(1),
@@ -63,7 +64,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ matchId: strin
       return tx.match.findUnique({
         where: { id: activated.id },
         include: {
-          participants: { include: { agent: true } },
+          participants: { include: { agent: { select: publicAgentSelect } } },
         },
       });
     });

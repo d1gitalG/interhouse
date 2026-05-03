@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { parseReasoningBeats } from "@/lib/character-presentation";
+import { buildMatchupPreview, deriveAgentScouting } from "@/lib/agent-scouting";
 import { prisma } from "@/lib/prisma";
 import { tournamentInclude } from "@/lib/tournaments";
 import {
@@ -176,6 +177,20 @@ export default async function TournamentDetailPage({
     rounds.set(tournamentMatch.round, rows);
   }
 
+  const scoutingMatches = tournament.matches.map((item) => ({
+    ...item.match,
+    tournamentMatch: { round: item.round, slot: item.slot, tournament: { name: tournament.name } },
+  }));
+  const scoutingByAgentId = new Map(
+    tournament.entries.map((entry) => [
+      entry.agentId,
+      deriveAgentScouting({
+        agent: entry.agent,
+        matches: scoutingMatches,
+        tournamentEntries: [{ ...entry, tournament }],
+      }),
+    ]),
+  );
   const completedMatches = tournament.matches.filter((item) => item.match.status === "COMPLETED").length;
   const completedRecaps = tournament.matches
     .filter((item) => item.match.status === "COMPLETED")
@@ -364,22 +379,59 @@ export default async function TournamentDetailPage({
               <p className="mt-4 text-sm text-zinc-400">No entries have been added to this tournament.</p>
             ) : (
               <div className="mt-4 grid gap-3">
-                {tournament.entries.map((entry) => (
-                  <div key={entry.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-100">{entry.agent.name}</p>
-                        <p className="mt-1 text-xs text-zinc-500">House {entry.agent.house}</p>
+                {tournament.entries.map((entry) => {
+                  const scouting = scoutingByAgentId.get(entry.agentId);
+
+                  return (
+                    <div key={entry.id} className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-100">{entry.agent.name}</p>
+                          <p className="mt-1 text-xs text-zinc-500">House {entry.agent.house} · {entry.agent.strategyProfile}</p>
+                        </div>
+                        <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-xs text-zinc-300">
+                          Seed {entry.seed ?? "-"}
+                        </span>
                       </div>
-                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-xs text-zinc-300">
-                        Seed {entry.seed ?? "-"}
-                      </span>
+                      <p className="mt-3 text-xs text-zinc-400">
+                        {entry.eliminatedAt ? `Eliminated ${formatDate(entry.eliminatedAt)}` : "Still alive or pending bracket"}
+                      </p>
+                      {scouting ? (
+                        <div className="mt-4 rounded-lg border border-zinc-800 bg-black/30 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-[10px] uppercase tracking-widest text-zinc-500">Scouting card</p>
+                            <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+                              {scouting.confidence} confidence
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-zinc-300">{scouting.headline}</p>
+                          <div className="mt-3 grid gap-2 text-[11px] text-zinc-300">
+                            <p><span className="text-zinc-500">Identity:</span> {scouting.tacticalIdentity}</p>
+                            <p><span className="text-zinc-500">Watch-out flaw:</span> {scouting.likelyFlaw}</p>
+                            <p><span className="text-zinc-500">Best in:</span> {scouting.preferredFormat}</p>
+                          </div>
+                          {scouting.lowData ? (
+                            <p className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
+                              Low-data read: use as context, not a prediction.
+                            </p>
+                          ) : null}
+                          <div className="mt-3 grid gap-2 text-[11px] text-zinc-400">
+                            {scouting.backingEvidence.slice(0, 3).map((line) => (
+                              <p key={line}>• {line}</p>
+                            ))}
+                          </div>
+                          {scouting.recentMatches.length > 0 ? (
+                            <div className="mt-3 space-y-1 text-[11px] text-zinc-500">
+                              {scouting.recentMatches.map((match) => (
+                                <p key={match.id}>{match.result}: {match.label} — {match.scoreLine}</p>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
-                    <p className="mt-3 text-xs text-zinc-400">
-                      {entry.eliminatedAt ? `Eliminated ${formatDate(entry.eliminatedAt)}` : "Still alive or pending bracket"}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -405,6 +457,12 @@ export default async function TournamentDetailPage({
                           score: participant.score,
                         }));
                         const matchWinner = agentName(tournament, tournamentMatch.winnerAgentId ?? tournamentMatch.match.winnerId);
+                        const matchupScouting = participants.length === 2
+                          ? buildMatchupPreview(
+                              scoutingByAgentId.get(participants[0].id) ?? deriveAgentScouting({ agent: tournamentMatch.match.participants[0].agent, matches: scoutingMatches }),
+                              scoutingByAgentId.get(participants[1].id) ?? deriveAgentScouting({ agent: tournamentMatch.match.participants[1].agent, matches: scoutingMatches }),
+                            )
+                          : null;
 
                         return (
                           <article key={tournamentMatch.id} className="rounded-lg border border-zinc-800 bg-[#05070C] p-4">
@@ -441,6 +499,17 @@ export default async function TournamentDetailPage({
                                 ))
                               )}
                             </div>
+
+                            {matchupScouting ? (
+                              <div className="mt-4 rounded-lg border border-sky-500/20 bg-sky-500/10 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-[10px] uppercase tracking-widest text-sky-200/80">Matchup preview</p>
+                                  <span className="text-[10px] font-semibold text-sky-100">{matchupScouting.confidence} confidence</span>
+                                </div>
+                                <p className="mt-2 font-mono text-[11px] text-sky-100/90">{matchupScouting.summary}</p>
+                                <p className="mt-2 text-[11px] leading-5 text-sky-100/80">{matchupScouting.angles[2]}</p>
+                              </div>
+                            ) : null}
 
                             <div className="mt-4 grid gap-2 text-xs text-zinc-400 sm:grid-cols-2">
                               <p>Winner: <span className="text-zinc-100">{matchWinner ?? "TBD"}</span></p>

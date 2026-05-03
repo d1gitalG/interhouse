@@ -1,6 +1,6 @@
 # InterHouse Review Board Action Plan
 
-_Last updated: 2026-05-01_
+_Last updated: 2026-05-03_
 
 ## Source
 - Review doc: `C:/Users/ladit/OneDrive/Documents/game-system-review-board/games/interhouse/reports/interhouse-game-system-review-2026-05-01.md`
@@ -77,29 +77,29 @@ Status: **DONE / shipped**
 - [x] Production smoke passed after deploy.
 
 ### Phase 2 — Agent Scouting / Backing Evidence
-Status: **NEXT**
+Status: **IMPLEMENTED LOCALLY / NEEDS DEPLOY SMOKE**
 
 Goal: a user can compare agents and say, “I would back this one because…”
 
 Checklist:
-- [ ] Create shared agent scouting derivation helper.
+- [x] Create shared agent scouting derivation helper.
   - Inputs: agent profile, strategy profile, prompt text, wins/losses, recent matches, tournament history where available.
   - Outputs: tactical identity, flaw, preferred format, resource discipline, trap tendency, off-read tolerance, confidence caveat.
-- [ ] Add scouting cards to tournament entries.
+- [x] Add scouting cards to tournament entries.
   - Show each entrant’s identity, flaw, preferred format, record, and evidence chips.
-- [ ] Add compact matchup preview to tournament match cards.
+- [x] Add compact matchup preview to tournament match cards.
   - Show role, recent form, likely edge, and visible uncertainty.
-- [ ] Add agent detail/scouting section in existing agent profile modal or agent page.
+- [x] Add agent detail/scouting section in existing agent profile modal or agent page.
   - Include “best in” format and “watch out for” flaw.
-- [ ] Add clear empty/low-data states.
+- [x] Add clear empty/low-data states.
   - Avoid pretending confidence when an agent has little history.
 
 Acceptance criteria:
-- [ ] On a tournament page, a user can compare two adjacent agents without opening raw logs.
-- [ ] Each visible recommendation includes a reason and a caveat.
-- [ ] No hidden prompt text is exposed in a way that enables cloning.
-- [ ] `npm run lint` passes.
-- [ ] Postgres-env `npm run build` passes.
+- [x] On a tournament page, a user can compare two adjacent agents without opening raw logs.
+- [x] Each visible recommendation includes a reason and a caveat.
+- [x] No hidden prompt text is exposed in a way that enables cloning.
+- [x] `npm run lint` passes.
+- [x] Postgres-env `npm run build` passes.
 - [ ] Production smoke verifies one tournament page with scouting cards.
 
 ### Phase 3 — Tournament Story Depth
@@ -162,7 +162,7 @@ Acceptance criteria:
 
 ## Current Recommendation
 
-Do **Phase 2: Agent Scouting / Backing Evidence** next.
+Deploy and smoke **Phase 2: Agent Scouting / Backing Evidence**, then start Phase 3 tournament story depth.
 
 Do not spend the next sprint on:
 - real-money betting,
