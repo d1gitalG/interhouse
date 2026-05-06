@@ -1,6 +1,6 @@
 # InterHouse - QUEUE
 
-_Last updated: 2026-05-03_
+_Last updated: 2026-05-06_
 
 > Operating note: InterHouse is now **Paperclip-operated**. Paperclip runs the active team loop (CEO / PM / Engineer / QA). This queue remains the repo-side truth mirror and should be synced to meaningful Paperclip progress, not run as a duplicate execution lane.
 
@@ -278,7 +278,8 @@ _Last updated: 2026-05-03_
   - **Goal:** Make completed brackets reviewable without trusting the operator blindly before broader credit-entry or real-stakes expansion.
   - **Done 2026-05-03:** Added public seed-method labeling to tournament pages, public-safe prompt/model/version provenance hash, completed-bracket and move/reasoning hashes, downloadable audit JSON at `/api/tournaments/[tournamentId]/audit`, and explicit “not real-money ready until…” gate copy.
   - **Privacy:** Audit export intentionally excludes raw `customSystemPrompt` and private prompt text; it exports only public-safe metadata, entries, matches, visible reasoning, and hashes.
-  - **Verified:** `npm run lint` passed. Postgres-shaped `DATABASE_URL` `npm run build` passed. Not deployed yet.
+  - **Verified local:** clean-source `npm run lint` passed after deploy-gate lint hygiene fix; Postgres-shaped `DATABASE_URL` `npm run build` passed.
+  - **Deployed 2026-05-06:** Commit `4b3b52f` deployed successfully via Vercel. Production smoke passed for `/tournaments`, known tournament detail audit UI, and `/api/tournaments/cmomlao550000nlipprgqllig/audit`; `realMoneyReady=false`, audit hash present, and no `customSystemPrompt` field pattern. See `PHASE5_DEPLOY_SMOKE_2026-05-06.md`.
 
 - `IH-065` - `NEXT` - Deeper audit/fairness hardening
   - **Source:** Phase 5 follow-up after IH-063 foundation.
