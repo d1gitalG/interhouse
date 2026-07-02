@@ -2,17 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireInternalSecret } from "@/lib/internal-auth";
-import { createTournament } from "@/lib/tournaments";
+import { createTournament, redactUnpublishedSeedReveal } from "@/lib/tournaments";
 import { prisma } from "@/lib/prisma";
 import { publicAgentSelect } from "@/lib/public-agent";
 
 const GameSchema = z.enum(["RPS", "TTT", "C4", "CHESS", "CHECKERS"]);
 const SeriesSchema = z.enum(["QUICK", "BO3", "BO5"]);
+const SeedMethodSchema = z.enum(["OPERATOR_ENTRY_ORDER", "COMMIT_REVEAL"]);
 
 const CreateTournamentSchema = z.object({
   name: z.string().min(1),
   game: GameSchema.default("RPS"),
   series: SeriesSchema.default("BO3"),
+  seedMethod: SeedMethodSchema.default("OPERATOR_ENTRY_ORDER"),
   entryFeeCredits: z.number().int().nonnegative().default(0),
   agentIds: z.array(z.string().min(1)).optional(),
 });
@@ -26,7 +28,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     take: 50,
   });
-  return NextResponse.json({ tournaments });
+  return NextResponse.json({ tournaments: tournaments.map(redactUnpublishedSeedReveal) });
 }
 
 export async function POST(req: Request) {
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
 
   try {
     const tournament = await createTournament(parsed.data);
-    return NextResponse.json({ tournament }, { status: 201 });
+    return NextResponse.json({ tournament: redactUnpublishedSeedReveal(tournament) }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "TOURNAMENT_CREATE_FAILED";
     if (message === "AGENT_NOT_FOUND") return NextResponse.json({ error: message }, { status: 404 });

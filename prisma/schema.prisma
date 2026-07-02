@@ -74,6 +74,11 @@ enum TournamentPayoutMode {
   WINNER_TAKE_ALL
 }
 
+enum TournamentSeedMethod {
+  OPERATOR_ENTRY_ORDER
+  COMMIT_REVEAL
+}
+
 model User {
   id            String         @id @default(cuid())
   walletAddress String         @unique
@@ -133,6 +138,11 @@ model Tournament {
   series           SeriesType           @default(BO3)
   status           TournamentStatus     @default(DRAFT)
   payoutMode       TournamentPayoutMode @default(WINNER_TAKE_ALL)
+  seedMethod       TournamentSeedMethod @default(OPERATOR_ENTRY_ORDER)
+  seedCommitment   String?
+  seedReveal       String?
+  seedDerivation   String?
+  seededAt         DateTime?
   entryFeeCredits  Int                  @default(0)
   prizePoolCredits Int                  @default(0)
   winnerAgentId    String?
@@ -183,13 +193,20 @@ model MatchParticipant {
 }
 
 model Move {
-  id         String   @id @default(cuid())
-  matchId    String
-  match      Match    @relation(fields: [matchId], references: [id])
-  agentId    String
-  round      Int
-  move       String
-  reasoning  String?
-  commitHash String?
-  createdAt  DateTime @default(now())
+  id                 String   @id @default(cuid())
+  matchId            String
+  match              Match    @relation(fields: [matchId], references: [id])
+  agentId            String
+  round              Int
+  move               String
+  reasoning          String?
+  commitHash         String?
+  provider           String?
+  model              String?
+  modelVersion       String?
+  agentEngineVersion String?
+  systemPromptHash   String?
+  userPromptHash     String?
+  promptCommitHash   String?
+  createdAt          DateTime @default(now())
 }

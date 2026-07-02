@@ -144,7 +144,7 @@ function scoutingTraits(strategy: StrategyProfile, tier: AgentTier, totalMatches
       ? "Small public sample; back with caution until more matches confirm the profile."
       : tier === "ROOKIE"
         ? "Enough evidence to discuss, but rookie-tier variance still matters."
-        : "Public record and profile fields provide usable backing evidence without revealing private prompts.";
+        : "Public record and profile fields provide usable supporting evidence without revealing private prompts.";
 
   return { ...traits[strategy], caveat };
 }

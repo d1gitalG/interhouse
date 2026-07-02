@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+
 import Anthropic from "@anthropic-ai/sdk";
 
 export interface GameState {
@@ -67,11 +69,24 @@ export interface AgentConfig {
   house: string;
 }
 
+export const AGENT_ENGINE_PROVENANCE_VERSION = "interhouse-agent-engine-phase5-public-policy-v1";
+
+export interface AgentMoveProvenance {
+  provider: string;
+  model: string;
+  modelVersion?: string | null;
+  agentEngineVersion: string;
+  systemPromptHash: string;
+  userPromptHash: string;
+  promptCommitHash: string;
+}
+
 export interface AgentMoveResult {
   move: string;
   reasoning: string;
   toolsUsed: string[];
   thinkingMs: number;
+  provenance: AgentMoveProvenance;
 }
 
 type ParsedAgentMove = {
@@ -81,6 +96,65 @@ type ParsedAgentMove = {
   intent?: string;
   confidence?: number;
 };
+
+type ProviderAgentMove = {
+  parsed: ParsedAgentMove;
+  provider: string;
+  model: string;
+  modelVersion?: string | null;
+};
+
+type StableValue = null | boolean | number | string | StableValue[] | { [key: string]: StableValue };
+
+function toStableValue(value: unknown): StableValue {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.map((item) => toStableValue(item));
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, toStableValue(item)]),
+    );
+  }
+  return String(value);
+}
+
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function stableSha256(value: unknown) {
+  return sha256(JSON.stringify(toStableValue(value)));
+}
+
+function buildMoveProvenance(params: {
+  provider: string;
+  model: string;
+  modelVersion?: string | null;
+  systemPrompt: string;
+  userMessage: string;
+}): AgentMoveProvenance {
+  const systemPromptHash = sha256(params.systemPrompt);
+  const userPromptHash = sha256(params.userMessage);
+  return {
+    provider: params.provider,
+    model: params.model,
+    modelVersion: params.modelVersion ?? null,
+    agentEngineVersion: AGENT_ENGINE_PROVENANCE_VERSION,
+    systemPromptHash,
+    userPromptHash,
+    promptCommitHash: stableSha256({
+      agentEngineVersion: AGENT_ENGINE_PROVENANCE_VERSION,
+      provider: params.provider,
+      model: params.model,
+      modelVersion: params.modelVersion ?? null,
+      systemPromptHash,
+      userPromptHash,
+    }),
+  };
+}
 
 const STRATEGY_PROMPTS = {
   AGGRESSIVE: "You play to dominate. Take calculated risks. Go for the kill move.",
@@ -269,23 +343,30 @@ function parseAgentJson(text: string): ParsedAgentMove {
   throw new Error("INVALID_AGENT_JSON:" + raw.slice(0, 500));
 }
 
-async function callAnthropic(systemPrompt: string, userMessage: string): Promise<ParsedAgentMove> {
+async function callAnthropic(systemPrompt: string, userMessage: string): Promise<ProviderAgentMove> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY_MISSING");
 
+  const requestedModel = "claude-sonnet-4-5";
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
-    model: "claude-sonnet-4-5",
+    model: requestedModel,
     max_tokens: 256,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });
 
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-  return parseAgentJson(text);
+  const model = response.model || requestedModel;
+  return {
+    parsed: parseAgentJson(text),
+    provider: "anthropic",
+    model,
+    modelVersion: model,
+  };
 }
 
-async function callGemini(systemPrompt: string, userMessage: string): Promise<ParsedAgentMove> {
+async function callGemini(systemPrompt: string, userMessage: string): Promise<ProviderAgentMove> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY_MISSING");
 
@@ -332,6 +413,7 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<Pa
           parts?: Array<{ text?: string }>;
         };
       }>;
+      modelVersion?: string;
       error?: {
         message: string;
         code: number;
@@ -344,7 +426,12 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<Pa
     }
 
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("\n") ?? "";
-    return parseAgentJson(text);
+    return {
+      parsed: parseAgentJson(text),
+      provider: "google-gemini",
+      model,
+      modelVersion: data.modelVersion ?? model,
+    };
   }
 
   throw new Error(lastError || "GEMINI_REQUEST_FAILED");
@@ -602,7 +689,7 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
 
   try {
     const isGemini = !!process.env.GEMINI_API_KEY;
-    const parsed = isGemini
+    const providerMove = isGemini
       ? await callGemini(systemPrompt, userMessage)
       : await callAnthropic(systemPrompt, userMessage);
 
@@ -610,7 +697,7 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       gameState,
       enforceRpsPredictionConsistency(
         gameState,
-        enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, parsed))
+        enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, providerMove.parsed))
       )
     );
 
@@ -619,6 +706,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       reasoning: consistent.reasoning,
       toolsUsed,
       thinkingMs: Date.now() - start,
+      provenance: buildMoveProvenance({
+        provider: providerMove.provider,
+        model: providerMove.model,
+        modelVersion: providerMove.modelVersion,
+        systemPrompt,
+        userMessage,
+      }),
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -637,6 +731,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
         reasoning: consistentRecovery.reasoning,
         toolsUsed: [...toolsUsed, "ENGINE_RECOVERY"],
         thinkingMs: Date.now() - start,
+        provenance: buildMoveProvenance({
+          provider: "interhouse-engine",
+          model: "deterministic-recovery",
+          modelVersion: AGENT_ENGINE_PROVENANCE_VERSION,
+          systemPrompt,
+          userMessage,
+        }),
       };
     }
     const fallbackMove = pickDeterministicFallbackMove(gameState, config);
@@ -645,6 +746,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       reasoning: "Fallback move used due to error: " + errorMsg,
       toolsUsed,
       thinkingMs: Date.now() - start,
+      provenance: buildMoveProvenance({
+        provider: "interhouse-engine",
+        model: "deterministic-fallback",
+        modelVersion: AGENT_ENGINE_PROVENANCE_VERSION,
+        systemPrompt,
+        userMessage,
+      }),
     };
   }
 }

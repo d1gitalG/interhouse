@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { GameType, Prisma, SeriesType } from "@prisma/client";
+import type { GameType, Prisma, SeriesType, TournamentSeedMethod } from "@prisma/client";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 const COOKIE_NAME = "interhouse_operator";
 const GAME_OPTIONS: GameType[] = ["RPS", "TTT", "C4", "CHESS", "CHECKERS"];
 const SERIES_OPTIONS: SeriesType[] = ["QUICK", "BO3", "BO5"];
+const SEED_METHOD_OPTIONS: TournamentSeedMethod[] = ["OPERATOR_ENTRY_ORDER", "COMMIT_REVEAL"];
 
 const OPERATOR_TOURNAMENT_INCLUDE = {
   entries: { include: { agent: true }, orderBy: { seed: "asc" as const } },
@@ -83,6 +84,11 @@ function parseSeries(value: string): SeriesType {
   return "BO3";
 }
 
+function parseSeedMethod(value: string): TournamentSeedMethod {
+  if (SEED_METHOD_OPTIONS.includes(value as TournamentSeedMethod)) return value as TournamentSeedMethod;
+  return "OPERATOR_ENTRY_ORDER";
+}
+
 async function unlockOperatorAction(formData: FormData) {
   "use server";
 
@@ -130,6 +136,7 @@ async function createTournamentAction(formData: FormData) {
       name,
       game: parseGame(formValue(formData, "game")),
       series: parseSeries(formValue(formData, "series")),
+      seedMethod: parseSeedMethod(formValue(formData, "seedMethod")),
       entryFeeCredits,
       agentIds,
     });
@@ -386,7 +393,15 @@ export default async function OperatorTournamentsPage({ searchParams }: { search
                 <input name="entryFeeCredits" type="number" min="0" step="1" defaultValue="0" className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400" />
               </label>
               <label className="space-y-2 text-sm text-zinc-300 md:col-span-2">
-                <span>Agent IDs, in seed order</span>
+                <span>Seed method</span>
+                <select name="seedMethod" defaultValue="COMMIT_REVEAL" className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400">
+                  <option value="COMMIT_REVEAL">Commit-reveal public draw</option>
+                  <option value="OPERATOR_ENTRY_ORDER">Operator entry order</option>
+                </select>
+                <span className="block text-xs leading-5 text-zinc-500">Commit-reveal creates a private reveal and public commitment at draft time, then publishes the reveal + derivation when the bracket is seeded.</span>
+              </label>
+              <label className="space-y-2 text-sm text-zinc-300 md:col-span-2">
+                <span>Agent IDs</span>
                 <textarea name="agentIds" rows={6} placeholder="agent_id_1&#10;agent_id_2&#10;agent_id_3&#10;agent_id_4" className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 outline-none focus:border-amber-400" />
               </label>
             </div>
@@ -395,7 +410,7 @@ export default async function OperatorTournamentsPage({ searchParams }: { search
 
           <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
             <h2 className="text-lg font-semibold">Recent agents</h2>
-            <p className="mt-1 text-xs text-zinc-500">Copy IDs into the create form. Seed order follows input order.</p>
+            <p className="mt-1 text-xs text-zinc-500">Copy IDs into the create form. Commit-reveal will derive final seed order at seeding time.</p>
             <div className="mt-4 max-h-[520px] space-y-3 overflow-auto pr-1">
               {agents.map((agent) => (
                 <div key={agent.id} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
@@ -419,6 +434,7 @@ export default async function OperatorTournamentsPage({ searchParams }: { search
                     <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                       <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-zinc-300">{tournament.status}</span>
                       <span>{tournament.game} / {tournament.series}</span>
+                      <span>{tournament.seedMethod.replaceAll("_", " ")}</span>
                       <span>{shortId(tournament.id)}</span>
                     </div>
                     <h3 className="mt-3 text-lg font-semibold text-zinc-100">{tournament.name}</h3>
@@ -426,6 +442,10 @@ export default async function OperatorTournamentsPage({ searchParams }: { search
                       {tournament.entries.length} entries / {completed}-{tournament.matches.length} matches completed / pool {tournament.prizePoolCredits} CR
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">Created {formatDate(tournament.createdAt)}</p>
+                    {tournament.seedCommitment ? (
+                      <p className="mt-1 break-all font-mono text-[11px] text-cyan-200">Seed commitment: {tournament.seedCommitment}</p>
+                    ) : null}
+                    {tournament.seededAt ? <p className="mt-1 text-xs text-zinc-500">Seeded {formatDate(tournament.seededAt)}</p> : null}
                   </div>
                   <Link href={`/tournaments/${tournament.id}`} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-100">View public detail</Link>
                 </div>

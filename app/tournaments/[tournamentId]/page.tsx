@@ -46,6 +46,18 @@ function shortHash(value: string) {
   return `${value.slice(0, 12)}…${value.slice(-8)}`;
 }
 
+function auditRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function auditString(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function auditNumber(value: unknown) {
+  return typeof value === "number" ? value : null;
+}
+
 function statusClass(status: string) {
   if (status === "ACTIVE") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
   if (status === "COMPLETED") return "border-sky-500/30 bg-sky-500/10 text-sky-200";
@@ -377,6 +389,11 @@ export default async function TournamentDetailPage({
       ? "Awaiting settlement"
       : "Not ready";
   const audit = buildTournamentAudit(tournament);
+  const seedDerivation = auditRecord(audit.seedMethod.derivation);
+  const seedAlgorithm = auditString(seedDerivation?.algorithm);
+  const originalOrderHash = auditString(seedDerivation?.originalOrderHash);
+  const derivedOrderHash = auditString(seedDerivation?.derivedOrderHash);
+  const derivedSeedOrder = Array.isArray(seedDerivation?.derivedOrder) ? seedDerivation.derivedOrder.map(auditRecord).filter((item) => item !== null) : [];
 
   return (
     <main className="min-h-screen bg-[#05070C] px-6 py-10 text-zinc-100">
@@ -486,6 +503,58 @@ export default async function TournamentDetailPage({
               <p className="mt-4 text-xs leading-5 text-zinc-400">
                 Prompt/model provenance: {shortHash(audit.promptModelProvenance.publicPromptPolicyHash)} · {audit.promptModelProvenance.modelPolicy} Raw custom prompts are not exposed.
               </p>
+              <div className="mt-5 rounded-2xl border border-cyan-500/20 bg-black/25 p-4">
+                <h3 className="text-sm font-semibold text-cyan-100">How this bracket was seeded</h3>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">
+                  {audit.seedMethod.detail} {seedAlgorithm ? `Verifier: ${seedAlgorithm}.` : "The audit export records the seed method and final seed-order hash."}
+                </p>
+                {tournament.seedMethod === "COMMIT_REVEAL" ? (
+                  <p className="mt-2 text-xs leading-5 text-zinc-300">
+                    The commitment was public before seeding. Once the bracket was seeded, the reveal became public and verifies when sha256(reveal) equals the original commitment.
+                  </p>
+                ) : null}
+                <div className="mt-3 grid gap-2 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Commitment</span>
+                    <span className="font-mono text-cyan-100">{audit.seedMethod.commitment ? shortHash(audit.seedMethod.commitment) : "Not recorded"}</span>
+                  </p>
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Reveal</span>
+                    <span className="font-mono text-cyan-100">{audit.seedMethod.reveal ? shortHash(audit.seedMethod.reveal) : "Published after seeding"}</span>
+                  </p>
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Reveal check</span>
+                    <span className="font-mono text-cyan-100">{audit.seedMethod.revealMatchesCommitment === null ? "Pending" : audit.seedMethod.revealMatchesCommitment ? "Verified" : "Mismatch"}</span>
+                  </p>
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Seed order hash</span>
+                    <span className="font-mono text-cyan-100">{shortHash(audit.seedMethod.seedOrderHash)}</span>
+                  </p>
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Original order hash</span>
+                    <span className="font-mono text-cyan-100">{originalOrderHash ? shortHash(originalOrderHash) : "Not applicable"}</span>
+                  </p>
+                  <p className="break-all rounded-lg border border-zinc-800 bg-zinc-950/70 p-2 text-zinc-400">
+                    <span className="block uppercase tracking-widest text-zinc-500">Derived order hash</span>
+                    <span className="font-mono text-cyan-100">{derivedOrderHash ? shortHash(derivedOrderHash) : "Available after commit-reveal seeding"}</span>
+                  </p>
+                </div>
+                {derivedSeedOrder.length > 0 ? (
+                  <ol className="mt-4 grid gap-2 md:grid-cols-2">
+                    {derivedSeedOrder.map((entry) => {
+                      const agentId = auditString(entry.agentId);
+                      const derivedSeed = auditNumber(entry.derivedSeed);
+                      const drawHash = auditString(entry.drawHash);
+                      return (
+                        <li key={`${agentId ?? "entry"}-${derivedSeed ?? "seed"}`} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-300">
+                          <span className="font-mono text-cyan-100">#{derivedSeed ?? "?"}</span> {agentName(tournament, agentId) ?? "Unknown entry"}
+                          {drawHash ? <span className="mt-1 block break-all font-mono text-[11px] text-zinc-500">draw {shortHash(drawHash)}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : null}
+              </div>
             </div>
             <Link
               href={`/api/tournaments/${tournament.id}/audit`}
@@ -498,7 +567,7 @@ export default async function TournamentDetailPage({
 
         <section className="rounded-2xl border border-red-500/25 bg-red-950/20 p-6">
           <p className="text-xs uppercase tracking-[0.25em] text-red-200/80">Gate</p>
-          <h2 className="mt-2 text-xl font-semibold text-red-100">Not real-money ready until…</h2>
+          <h2 className="mt-2 text-xl font-semibold text-red-100">Compliance gates before paid play</h2>
           <ul className="mt-3 grid gap-2 text-sm leading-6 text-red-50/90 md:grid-cols-2">
             {audit.gates.remainingRequirements.map((item) => (
               <li key={item}>• {item}</li>
@@ -516,8 +585,8 @@ export default async function TournamentDetailPage({
               <p className="mt-3 text-sm leading-6 text-zinc-300">{headlineReason}</p>
               <p className="mt-3 text-sm leading-6 text-zinc-300">
                 {zeroStake
-                  ? "No chips were at stake in this run — this was a zero-fee operator/showcase bracket."
-                  : `${formatCredits(tournament.prizePoolCredits)} was at stake with a ${formatCredits(tournament.entryFeeCredits)} entry fee.`}
+                  ? "This was a zero-fee operator/showcase bracket."
+                  : `${formatCredits(tournament.prizePoolCredits)} prize pool with a ${formatCredits(tournament.entryFeeCredits)} entry fee.`}
               </p>
 
               <div className="mt-5 grid gap-3 text-sm">

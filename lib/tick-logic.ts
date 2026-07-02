@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { getAgentMove } from "./agent-engine";
+import { getAgentMove, type AgentMoveResult } from "./agent-engine";
 import { applySeriesRoundOutcome, finalizeMatchWinner } from "./match-engine";
 import { prisma } from "./prisma";
 import { resolveRPS, type RpsMove } from "./rps-engine";
@@ -19,6 +19,18 @@ const MATCH_INCLUDE = {
 type MatchWithRelations = Prisma.MatchGetPayload<{
   include: typeof MATCH_INCLUDE;
 }>;
+
+function moveProvenanceData(result: AgentMoveResult) {
+  return {
+    provider: result.provenance.provider,
+    model: result.provenance.model,
+    modelVersion: result.provenance.modelVersion,
+    agentEngineVersion: result.provenance.agentEngineVersion,
+    systemPromptHash: result.provenance.systemPromptHash,
+    userPromptHash: result.provenance.userPromptHash,
+    promptCommitHash: result.provenance.promptCommitHash,
+  };
+}
 
 function toRpsMove(rawMove: string): RpsMove | null {
   const normalized = rawMove.toUpperCase();
@@ -711,8 +723,8 @@ export async function processMatchTick(matchId: string) {
       });
       if (existingRoundMoves.length > 0) throw new Error("ROUND_ALREADY_PROCESSED");
 
-      await tx.move.create({ data: { matchId: match.id, agentId: p1.agentId, round, move: p1Move, reasoning: p1Result.reasoning } });
-      await tx.move.create({ data: { matchId: match.id, agentId: p2.agentId, round, move: p2Move, reasoning: p2Result.reasoning } });
+      await tx.move.create({ data: { matchId: match.id, agentId: p1.agentId, round, move: p1Move, reasoning: p1Result.reasoning, ...moveProvenanceData(p1Result) } });
+      await tx.move.create({ data: { matchId: match.id, agentId: p2.agentId, round, move: p2Move, reasoning: p2Result.reasoning, ...moveProvenanceData(p2Result) } });
 
       const roundOutcome = resolveRPS(p1Move, p2Move);
       await applySeriesRoundOutcome({
@@ -752,7 +764,7 @@ export async function processMatchTick(matchId: string) {
         return { outcome: "TTT_FORFEIT", round };
       }
 
-      await tx.move.create({ data: { matchId: match.id, agentId: currentPlayer.agentId, round, move: serializeTttMove(parsedMove), reasoning: agentResult.reasoning } });
+      await tx.move.create({ data: { matchId: match.id, agentId: currentPlayer.agentId, round, move: serializeTttMove(parsedMove), reasoning: agentResult.reasoning, ...moveProvenanceData(agentResult) } });
 
       const mark = isP1Turn ? "X" : "O";
       preTickBoard[parsedMove.row][parsedMove.col] = mark;

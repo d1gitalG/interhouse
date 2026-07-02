@@ -1,10 +1,10 @@
 import { createHash } from "crypto";
 import type { Prisma } from "@prisma/client";
 
+import { AGENT_ENGINE_PROVENANCE_VERSION } from "@/lib/agent-engine";
 import { tournamentInclude } from "@/lib/tournaments";
 
 export const AUDIT_EXPORT_VERSION = "interhouse-tournament-audit-v1";
-export const AGENT_ENGINE_PROVENANCE_VERSION = "interhouse-agent-engine-phase5-public-policy-v1";
 
 const PUBLIC_PROMPT_POLICY_DESCRIPTOR = {
   version: AGENT_ENGINE_PROVENANCE_VERSION,
@@ -49,11 +49,30 @@ export function publicSha256(value: unknown) {
   return createHash("sha256").update(stableStringify(value)).digest("hex");
 }
 
-export function getSeedMethodLabel() {
+function rawSha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function parseSeedDerivation(value: string | null): StableValue {
+  if (!value) return null;
+  try {
+    return toStableValue(JSON.parse(value));
+  } catch {
+    return value;
+  }
+}
+
+export function getSeedMethodLabel(tournament?: Pick<AuditableTournament, "seedMethod">) {
+  if (tournament?.seedMethod === "COMMIT_REVEAL") return "Commit-reveal seeding";
   return "Operator / entry-order seeding";
 }
 
-export function getSeedMethodDetail() {
+export function getSeedMethodDetail(tournament?: Pick<AuditableTournament, "seedMethod" | "seededAt">) {
+  if (tournament?.seedMethod === "COMMIT_REVEAL") {
+    return tournament.seededAt
+      ? "A private reveal value was committed before bracket creation, then revealed after seeding so the public audit can verify how first-round order was derived. Bracket slots are paired from the derived seed order (#1 vs #2, #3 vs #4, etc.)."
+      : "A private reveal value has been committed before bracket creation. The reveal and bracket-order derivation will be published after the bracket is seeded.";
+  }
   return "Seeds are assigned from the operator-provided entry list when the tournament is created, then first-round bracket slots are paired in seed order (#1 vs #2, #3 vs #4, etc.). No public random draw or rating-based seed proof is recorded yet.";
 }
 
@@ -100,6 +119,13 @@ function publicMatches(tournament: AuditableTournament) {
         move: move.move,
         reasoning: move.reasoning,
         commitHash: move.commitHash,
+        provider: move.provider,
+        model: move.model,
+        modelVersion: move.modelVersion,
+        agentEngineVersion: move.agentEngineVersion,
+        systemPromptHash: move.systemPromptHash,
+        userPromptHash: move.userPromptHash,
+        promptCommitHash: move.promptCommitHash,
         createdAt: move.createdAt,
         publicMoveHash: publicSha256({
           matchId: tournamentMatch.matchId,
@@ -109,6 +135,13 @@ function publicMatches(tournament: AuditableTournament) {
           move: move.move,
           reasoning: move.reasoning,
           commitHash: move.commitHash,
+          provider: move.provider,
+          model: move.model,
+          modelVersion: move.modelVersion,
+          agentEngineVersion: move.agentEngineVersion,
+          systemPromptHash: move.systemPromptHash,
+          userPromptHash: move.userPromptHash,
+          promptCommitHash: move.promptCommitHash,
           createdAt: move.createdAt,
         }),
       }))
@@ -126,23 +159,34 @@ export function buildTournamentAudit(tournament: AuditableTournament) {
     series: tournament.series,
     status: tournament.status,
     payoutMode: tournament.payoutMode,
+    seedMethod: tournament.seedMethod,
     entryFeeCredits: tournament.entryFeeCredits,
     prizePoolCredits: tournament.prizePoolCredits,
     winnerAgentId: tournament.winnerAgentId,
+    seededAt: tournament.seededAt,
     settledAt: tournament.settledAt,
     createdAt: tournament.createdAt,
     updatedAt: tournament.updatedAt,
   };
+  const publishedReveal = tournament.seededAt ? tournament.seedReveal : null;
   const seedMethod = {
-    label: getSeedMethodLabel(),
-    detail: getSeedMethodDetail(),
+    method: tournament.seedMethod,
+    label: getSeedMethodLabel(tournament),
+    detail: getSeedMethodDetail(tournament),
+    commitment: tournament.seedCommitment,
+    reveal: publishedReveal,
+    revealHash: publishedReveal ? rawSha256(publishedReveal) : null,
+    verifier: "Verify sha256(reveal) equals commitment, then recompute derivation.derivedOrder by sorting entries by sha256(tournamentId:reveal:entryId:agentId:originalSeed:enteredAt).",
+    revealMatchesCommitment: publishedReveal && tournament.seedCommitment ? rawSha256(publishedReveal) === tournament.seedCommitment : null,
+    seededAt: tournament.seededAt,
+    derivation: tournament.seededAt ? parseSeedDerivation(tournament.seedDerivation) : null,
     seedOrderHash: publicSha256(entries.map((entry) => ({ agentId: entry.agentId, seed: entry.seed, enteredAt: entry.enteredAt }))),
   };
   const promptModelProvenance = {
     agentEngineVersion: AGENT_ENGINE_PROVENANCE_VERSION,
-    modelPolicy: "Gemini when GEMINI_API_KEY is configured using GEMINI_MODEL or gemini fallback candidates; otherwise Anthropic claude-sonnet-4-5. Exact per-move provider response metadata is not persisted yet.",
+    modelPolicy: "New moves persist public-safe provider/model/modelVersion plus prompt hash commits at decision time; legacy moves may have null provenance fields. Gemini is used when GEMINI_API_KEY is configured using GEMINI_MODEL or gemini fallback candidates; otherwise Anthropic claude-sonnet-4-5 is used.",
     publicPromptPolicyHash: publicSha256(PUBLIC_PROMPT_POLICY_DESCRIPTOR),
-    customPromptPrivacy: "Agent private prompt text is intentionally not exported or hashed raw; future real-stakes mode needs private review escrow or commit/reveal prompt attestations.",
+    customPromptPrivacy: "Agent private prompt text is intentionally not exported or hashed raw; future paid modes need private review escrow or commit/reveal prompt attestations.",
   };
   const movesHash = publicSha256(matches.flatMap((match) => match.moves));
   const completedBracketHash = publicSha256(matches.filter((match) => match.status === "COMPLETED"));
@@ -165,13 +209,13 @@ export function buildTournamentAudit(tournament: AuditableTournament) {
     },
     gates: {
       realMoneyReady: false,
-      statement: "InterHouse tournament brackets are not real-money ready yet.",
+      statement: "InterHouse tournament brackets are not approved for paid regulated play yet.",
       remainingRequirements: [
-        "Persist per-move provider/model/version metadata and prompt commit hashes at decision time.",
-        "Record a public random seed or independently reviewable seed draw before bracket creation.",
+        "Backfill or separately attest legacy moves that predate move-level provider/model/version metadata and prompt commit hashes.",
+        "Use commit-reveal seeding or another independently reviewable seed draw for every public credit-entry bracket.",
         "Add commit/reveal or signed attestations for private custom prompts without exposing prompt text.",
         "Run adversarial audit/replay tests and define dispute, refund, and operator-key procedures.",
-        "Complete legal/compliance review before any real-money or cash-equivalent entry fees.",
+        "Complete legal/compliance review before any paid regulated entry fees.",
       ],
     },
   };

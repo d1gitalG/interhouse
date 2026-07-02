@@ -128,6 +128,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ matchId: strin
           round,
           move: result.move,
           reasoning: result.reasoning,
+          provider: result.provenance.provider,
+          model: result.provenance.model,
+          modelVersion: result.provenance.modelVersion,
+          agentEngineVersion: result.provenance.agentEngineVersion,
+          systemPromptHash: result.provenance.systemPromptHash,
+          userPromptHash: result.provenance.userPromptHash,
+          promptCommitHash: result.provenance.promptCommitHash,
         },
       });
 
