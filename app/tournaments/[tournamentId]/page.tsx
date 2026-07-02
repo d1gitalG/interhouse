@@ -486,6 +486,9 @@ export default async function TournamentDetailPage({
               <p className="mt-3 text-sm leading-6 text-zinc-300">
                 {audit.seedMethod.label}: {audit.seedMethod.detail}
               </p>
+              <p className="mt-2 text-sm leading-6 text-zinc-300">
+                Credits-only, prototype fairness controls: duplicate/suspicious entries limited.
+              </p>
               <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
                 <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
                   <p className="uppercase tracking-widest text-zinc-500">Export hash</p>
