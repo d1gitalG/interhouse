@@ -83,6 +83,8 @@ export interface AgentMoveProvenance {
 
 export interface AgentMoveResult {
   move: string;
+  rawMove: string | null;
+  overrideRule: string | null;
   reasoning: string;
   toolsUsed: string[];
   thinkingMs: number;
@@ -103,6 +105,13 @@ type ProviderAgentMove = {
   model: string;
   modelVersion?: string | null;
 };
+
+type EngineOverrideRule =
+  | "MIRROR_ASYMMETRY"
+  | "OPPONENT_PREDICTION_LEGALITY"
+  | "PREDICTION_CONSISTENCY"
+  | "ENGINE_RECOVERY"
+  | "ENGINE_FALLBACK";
 
 type StableValue = null | boolean | number | string | StableValue[] | { [key: string]: StableValue };
 
@@ -635,6 +644,31 @@ function composeRpsReasoning(gameState: GameState, parsed: ParsedAgentMove): Par
   };
 }
 
+function applyInstrumentedEnforcement(
+  gameState: GameState,
+  parsed: ParsedAgentMove,
+  initialOverrideRule: EngineOverrideRule | null = null,
+): { parsed: ParsedAgentMove; overrideRule: EngineOverrideRule | null } {
+  let current = parsed;
+  let overrideRule = initialOverrideRule;
+
+  const applyRule = (
+    rule: EngineOverrideRule,
+    enforce: (gameState: GameState, parsed: ParsedAgentMove) => ParsedAgentMove,
+  ) => {
+    const beforeMove = current.move;
+    const next = enforce(gameState, current);
+    if (next.move !== beforeMove) overrideRule = rule;
+    current = next;
+  };
+
+  applyRule("MIRROR_ASYMMETRY", enforceMirrorAsymmetry);
+  applyRule("OPPONENT_PREDICTION_LEGALITY", enforceOpponentPredictionLegality);
+  applyRule("PREDICTION_CONSISTENCY", enforceRpsPredictionConsistency);
+
+  return { parsed: current, overrideRule };
+}
+
 function buildDeterministicRecoveryMove(gameState: GameState): ParsedAgentMove | null {
   if (gameState.game !== "RPS") return null;
   const legalMoves = gameState.availableMoves
@@ -693,16 +727,13 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
       ? await callGemini(systemPrompt, userMessage)
       : await callAnthropic(systemPrompt, userMessage);
 
-    const consistent = composeRpsReasoning(
-      gameState,
-      enforceRpsPredictionConsistency(
-        gameState,
-        enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, providerMove.parsed))
-      )
-    );
+    const enforced = applyInstrumentedEnforcement(gameState, providerMove.parsed);
+    const consistent = composeRpsReasoning(gameState, enforced.parsed);
 
     return {
       move: consistent.move,
+      rawMove: providerMove.parsed.move,
+      overrideRule: enforced.overrideRule,
       reasoning: consistent.reasoning,
       toolsUsed,
       thinkingMs: Date.now() - start,
@@ -719,15 +750,12 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
     console.error("[AGENT ENGINE ERROR]", errorMsg);
     const recoveryMove = buildDeterministicRecoveryMove(gameState);
     if (recoveryMove) {
-      const consistentRecovery = composeRpsReasoning(
-        gameState,
-        enforceRpsPredictionConsistency(
-          gameState,
-          enforceOpponentPredictionLegality(gameState, enforceMirrorAsymmetry(gameState, recoveryMove))
-        )
-      );
+      const enforcedRecovery = applyInstrumentedEnforcement(gameState, recoveryMove, "ENGINE_RECOVERY");
+      const consistentRecovery = composeRpsReasoning(gameState, enforcedRecovery.parsed);
       return {
         move: consistentRecovery.move,
+        rawMove: null,
+        overrideRule: enforcedRecovery.overrideRule,
         reasoning: consistentRecovery.reasoning,
         toolsUsed: [...toolsUsed, "ENGINE_RECOVERY"],
         thinkingMs: Date.now() - start,
@@ -743,6 +771,8 @@ export async function getAgentMove(gameState: GameState, config: AgentConfig): P
     const fallbackMove = pickDeterministicFallbackMove(gameState, config);
     return {
       move: fallbackMove,
+      rawMove: null,
+      overrideRule: "ENGINE_FALLBACK",
       reasoning: "Fallback move used due to error: " + errorMsg,
       toolsUsed,
       thinkingMs: Date.now() - start,
