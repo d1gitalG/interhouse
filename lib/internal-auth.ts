@@ -10,3 +10,9 @@ export function requireInternalSecret(req: Request) {
 
   return null;
 }
+
+export function hasValidInternalSecret(req: Request) {
+  const expected = process.env.INTERNAL_SECRET;
+  const provided = req.headers.get("x-internal-secret");
+  return Boolean(expected && provided === expected);
+}

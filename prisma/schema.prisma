@@ -84,6 +84,7 @@ model User {
   walletAddress String         @unique
   agents        AgentProfile[]
   credits       Int            @default(0)
+  agentSlots    Int            @default(1)
   createdAt     DateTime       @default(now())
 }
 
