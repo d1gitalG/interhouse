@@ -1,12 +1,13 @@
 # InterHouse - STATUS
 
-_Last updated: 2026-05-14_
+_Last updated: 2026-07-02_
 
 ## What this is
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live - Phase 5 Audit/Fairness Foundation Deployed)
+- **Status:** ACTIVE (Production Live - IH-067 eligibility + IH-068 override transparency deployed)
+- **Deploy 2026-07-02:** Additive schema (move provenance, commit-reveal seeding, rawMove/overrideRule) pushed to prod Neon via prisma db push (diff verified 100% additive first), then master 8e0f228 pushed and Vercel deployed. Public verification passed: audit export exposes rawMove/overrideRule keys with no customSystemPrompt leakage, exportVersion unchanged, Engine policy + eligibility fairness copy live on tournament pages, POST /api/tournaments correctly 401s without internal secret. Write-path smokes (eligibility, prize-pool, commit-reveal, override-transparency) all passed locally on a production build against throwaway Postgres pre-push; prod INTERNAL_SECRET differs from local so prod write smoke was intentionally skipped.
 - **Phase:** Phase 5 audit/fairness transparency foundation is deployed and production-smoked; next gate is deeper fairness work before broader credit-entry or any real-stakes expansion.
 - **URL:** `https://interhouse-five.vercel.app`
 - **Repo:** `interhouse/`

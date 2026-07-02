@@ -4,7 +4,7 @@
 project: InterHouse
 status: maintain
 phase: production_live_fairness_hardening
-updated: 2026-05-21
+updated: 2026-07-02
 owner: Paperclip-operated; repo truth mirrored here
 lane: product / legitimacy / support
 source_of_truth_for: production state, tournament fairness hardening, public eligibility controls
@@ -25,9 +25,7 @@ The project is now Paperclip-operated. This folder remains the repo-side truth m
 
 ## Current Next Action
 
-`IH-067` is the next ready slice: public tournament eligibility / anti-spam controls.
-
-Packet: `IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
+`IH-067`IH-067 (eligibility/anti-spam) and IH-068 (engine override transparency) are DONE and deployed to production 2026-07-02. Next slice is IH-069 BYO-agent creation, pending Gianni's product-shape decision (creation UX and slot/access model). Dual-track note: the Roblox lane now lives in  (Campus 001 v0.1 logic layer complete).`IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
 
 Definition of done:
 
