@@ -131,6 +131,7 @@ async function createTournamentAction(formData: FormData) {
   if (!name) redirectWith("error", "Tournament name is required");
   if (!Number.isInteger(entryFeeCredits) || entryFeeCredits < 0) redirectWith("error", "Entry fee must be a non-negative integer");
 
+  let tournamentName: string;
   try {
     const tournament = await createTournament({
       name,
@@ -140,12 +141,13 @@ async function createTournamentAction(formData: FormData) {
       entryFeeCredits,
       agentIds,
     });
+    tournamentName = tournament.name;
     revalidatePath("/operator/tournaments");
     revalidatePath("/tournaments");
-    redirectWith("notice", `Created ${tournament.name}`);
   } catch (error) {
     redirectWith("error", error instanceof Error ? error.message : "Tournament creation failed");
   }
+  redirectWith("notice", `Created ${tournamentName}`);
 }
 
 async function seedTournamentAction(formData: FormData) {
@@ -158,10 +160,10 @@ async function seedTournamentAction(formData: FormData) {
     await seedTournament(tournamentId);
     revalidatePath("/operator/tournaments");
     revalidatePath("/tournaments");
-    redirectWith("notice", "Tournament seeded");
   } catch (error) {
     redirectWith("error", error instanceof Error ? error.message : "Tournament seed failed");
   }
+  redirectWith("notice", "Tournament seeded");
 }
 
 async function advanceMatchAction(formData: FormData) {
@@ -175,10 +177,10 @@ async function advanceMatchAction(formData: FormData) {
     await advanceTournamentFromMatch(matchId, tournamentId);
     revalidatePath("/operator/tournaments");
     revalidatePath("/tournaments");
-    redirectWith("notice", "Tournament match advanced");
   } catch (error) {
     redirectWith("error", error instanceof Error ? error.message : "Tournament advance failed");
   }
+  redirectWith("notice", "Tournament match advanced");
 }
 
 async function advanceReadyMatchesAction(formData: FormData) {
@@ -187,6 +189,7 @@ async function advanceReadyMatchesAction(formData: FormData) {
   if (!(await isOperatorUnlocked())) redirectWith("error", "Operator unlock required");
   const tournamentId = formValue(formData, "tournamentId");
 
+  let advancedCount: number;
   try {
     const ready = await prisma.tournamentMatch.findMany({
       where: {
@@ -201,12 +204,13 @@ async function advanceReadyMatchesAction(formData: FormData) {
       await advanceTournamentFromMatch(item.matchId, tournamentId);
     }
 
+    advancedCount = ready.length;
     revalidatePath("/operator/tournaments");
     revalidatePath("/tournaments");
-    redirectWith("notice", `Advanced ${ready.length} ready match${ready.length === 1 ? "" : "es"}`);
   } catch (error) {
     redirectWith("error", error instanceof Error ? error.message : "Bulk advance failed");
   }
+  redirectWith("notice", `Advanced ${advancedCount} ready match${advancedCount === 1 ? "" : "es"}`);
 }
 
 async function settleTournamentAction(formData: FormData) {
@@ -219,10 +223,10 @@ async function settleTournamentAction(formData: FormData) {
     await settleTournament(tournamentId);
     revalidatePath("/operator/tournaments");
     revalidatePath("/tournaments");
-    redirectWith("notice", "Tournament settled");
   } catch (error) {
     redirectWith("error", error instanceof Error ? error.message : "Tournament settlement failed");
   }
+  redirectWith("notice", "Tournament settled");
 }
 
 async function loadOperatorData() {
