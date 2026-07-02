@@ -1,15 +1,25 @@
 # InterHouse - QUEUE
 
-_Last updated: 2026-05-14_
+_Last updated: 2026-07-02_
 
 > Operating note: InterHouse is now **Paperclip-operated**. Paperclip runs the active team loop (CEO / PM / Engineer / QA). This queue remains the repo-side truth mirror and should be synced to meaningful Paperclip progress, not run as a duplicate execution lane.
 
-- `IH-067` - `READY` - Public tournament eligibility / anti-spam controls
+- `IH-069` - `DONE (not deployed)` - BYO agents v1: A3 hybrid creation + B2 slot model
+  - **Source:** Gianni approved `A3 + B2` via the BYO_AGENT_DECISION brief, 2026-07-02.
+  - **Packet:** `IH_069_BYO_AGENTS_PACKET.md`
+  - **Done 2026-07-02:** Public agent creation now requires x-address identity, forces ROOKIE tier, validates a 500-char filtered directive, and enforces per-user agent slots (default 1, max 3, unlock via 10 wins/slot or 500 CR) inside the create transaction. Internal-secret mode unchanged. All 8 BYO smoke cases plus all four regression smokes passed on throwaway local Postgres. See `IH-069_IMPLEMENTATION_2026-07-02.md`.
+  - **Gate:** production deploy awaits Gianni.
+
+- `IH-068` - `DONE` - Engine override transparency (rawMove/overrideRule audit trail)
+  - **Source:** Dual-track plan 2026-07-02; trust prerequisite for BYO-agent competition.
+  - **Packet:** `IH_068_ENGINE_OVERRIDE_TRANSPARENCY_PACKET.md`
+  - **Done 2026-07-02:** Enforcement pipeline instrumented (behavior unchanged); rawMove/overrideRule persisted per move and audit-exported with hash coverage; public engine policy copy added. Deployed to production 2026-07-02 (see `STATUS.md`). Receipt: `IH-068_IMPLEMENTATION_2026-07-02.md`.
+
+- `IH-067` - `DONE` - Public tournament eligibility / anti-spam controls
   - **Source:** Council v2 fairness evaluation selected this slice 6/8 after `IH-066` commit-reveal foundation.
   - **Packet:** `IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
   - **DoD:** eligibility rule matrix, duplicate/spam entry prevention path, clear public fairness copy, tests for allowed/rejected entries, no audit/export regression.
-  - **Gate:** no production deploy, real-stakes framing, or real-money/SOL language without Gianni approval.
-  - **Implemented 2026-07-02:** Codex-executed on branch ; lint/tsc/build pass; live eligibility + prize-pool + commit-reveal smokes passed 2026-07-02 on throwaway local Postgres. See .
+  - **Done 2026-07-02:** Codex-executed on branch `ih-067-eligibility`; lint/tsc/build pass; eligibility + prize-pool + commit-reveal live smokes passed on throwaway local Postgres. Deployed to production 2026-07-02. Receipt: `IH-067_IMPLEMENTATION_2026-07-02.md`.
 
 - `IH-001` - `DONE` - Run the app locally and complete one end-to-end match test
   - **Done:** fresh local match `cmmiuq32p00005oiprz6slvnx` completed successfully; notes saved in `RUNTIME_TEST_2026-03-09.md`
