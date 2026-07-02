@@ -1,8 +1,14 @@
 # InterHouse - QUEUE
 
-_Last updated: 2026-05-06_
+_Last updated: 2026-05-14_
 
 > Operating note: InterHouse is now **Paperclip-operated**. Paperclip runs the active team loop (CEO / PM / Engineer / QA). This queue remains the repo-side truth mirror and should be synced to meaningful Paperclip progress, not run as a duplicate execution lane.
+
+- `IH-067` - `READY` - Public tournament eligibility / anti-spam controls
+  - **Source:** Council v2 fairness evaluation selected this slice 6/8 after `IH-066` commit-reveal foundation.
+  - **Packet:** `IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
+  - **DoD:** eligibility rule matrix, duplicate/spam entry prevention path, clear public fairness copy, tests for allowed/rejected entries, no audit/export regression.
+  - **Gate:** no production deploy, real-stakes framing, or real-money/SOL language without Gianni approval.
 
 - `IH-001` - `DONE` - Run the app locally and complete one end-to-end match test
   - **Done:** fresh local match `cmmiuq32p00005oiprz6slvnx` completed successfully; notes saved in `RUNTIME_TEST_2026-03-09.md`
@@ -281,10 +287,27 @@ _Last updated: 2026-05-06_
   - **Verified local:** clean-source `npm run lint` passed after deploy-gate lint hygiene fix; Postgres-shaped `DATABASE_URL` `npm run build` passed.
   - **Deployed 2026-05-06:** Commit `4b3b52f` deployed successfully via Vercel. Production smoke passed for `/tournaments`, known tournament detail audit UI, and `/api/tournaments/cmomlao550000nlipprgqllig/audit`; `realMoneyReady=false`, audit hash present, and no `customSystemPrompt` field pattern. See `PHASE5_DEPLOY_SMOKE_2026-05-06.md`.
 
-- `IH-065` - `NEXT` - Deeper audit/fairness hardening
+- `IH-065` - `IN_PROGRESS` - Deeper audit/fairness hardening
   - **Source:** Phase 5 follow-up after IH-063 foundation.
   - **Goal:** Close the remaining trust gaps before broader credit-entry or real-stakes expansion.
+  - **Decision 2026-05-07:** Next implementation slice selected in `FAIRNESS_NEXT_SLICE_DECISION_2026-05-07.md`: persist move-level provider/model/version metadata and prompt commit hashes at decision time.
   - **DoD:** Decide and implement random/ranked/commit-reveal seeding, persist per-move provider/model/version metadata at decision time, design prompt commit/reveal or private review escrow, and add eligibility/anti-spam controls for public tournaments.
+
+- `IH-065A` - `DONE` - Persist move-level audit provenance
+  - **Source:** `FAIRNESS_NEXT_SLICE_DECISION_2026-05-07.md`.
+  - **Goal:** Turn the current audit export's disclosed provider-metadata gap into durable per-move evidence without exposing private prompts.
+  - **Done 2026-05-12:** Added nullable move-level provider/model/modelVersion, engine version, prompt hash, and prompt commit fields; new match API and tick-created RPS/TTT moves persist them; legacy moves remain readable with null provenance.
+  - **Audit:** `/api/tournaments/[tournamentId]/audit` now exports the public-safe provenance fields, updates move hashes to cover them, and keeps `realMoneyReady=false`.
+  - **Verified local:** `npm run db:generate`, `npm run lint`, and Postgres-shaped `DATABASE_URL='postgresql://user:pass@localhost:5432/interhouse' npm run build` passed. See `IH-065A_SMOKE_2026-05-12.md`.
+
+- `IH-066` - `DONE` - Commit-reveal tournament seeding foundation
+  - **Source:** `_mwp/operating-org/knowledge/INTERHOUSE_COUNCIL_BRIEF_2026-05-13.md` full-council deliverable after InterHouse introduction.
+  - **Goal:** Make public tournament seeding credible before broader credit-entry expansion.
+  - **Done 2026-05-13:** Added tournament seed method/provenance fields, commit-reveal draft commitments, reveal-on-seed derivation, API/operator selection, audit export proof fields, pre-seed reveal redaction on public API responses, and public “How this bracket was seeded” explanation.
+  - **Audit:** Commit-reveal audit data now includes seed method, commitment, reveal only after seeding, reveal verification, derivation metadata, final seed-order hash, and prompt-safe move provenance without raw private prompts.
+  - **Verified local:** `npm run db:generate`, `npm run lint`, and Postgres-shaped `DATABASE_URL='postgresql://user:pass@localhost:5432/interhouse' npm run build` passed.
+  - **Decision note 2026-05-14:** Commit-reveal is now the scoped public seeding path for near-term legitimacy; see `SEEDING_PATH_DECISION_2026-05-14.md`.
+  - **Deferred:** Ranked seeding remains deferred until enough public match history exists; broader paid-play readiness still requires the separate compliance/eligibility gates.
 
 - `IH-064` - `DONE` - BO3 limit-3 rematch of same Phase 4 bracket
   - **Done 2026-05-03:** Changed BO3 RPS move limit from 2 to 3, deployed commit `1c50702`, and reran the same 4-agent 10 CR bracket (`cmoq4t7tb000004i8df5sigis`).

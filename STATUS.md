@@ -1,6 +1,6 @@
 # InterHouse - STATUS
 
-_Last updated: 2026-05-06_
+_Last updated: 2026-05-14_
 
 ## What this is
 AI Agent Battle Arena built in Next.js + Prisma.
@@ -93,12 +93,12 @@ InterHouse Production Launch (MVP+)
 - Current plan/checklist: `REVIEW_BOARD_ACTION_PLAN_2026-05-01.md`
 
 ## Next action
-Continue deeper audit/fairness work before broader credit-entry or any real-stakes expansion.
+Commit-reveal is the selected/scoped public tournament seeding path after `IH-066` (see `SEEDING_PATH_DECISION_2026-05-14.md`). Council v2 selected the next fairness hardening slice as **public tournament eligibility / anti-spam controls** (6/8 council vote). See `PUBLIC_ELIGIBILITY_ANTI_SPAM_SLICE_2026-05-14.md` and `IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`.
 
 ## Next 3 tasks
-1. Decide random/ranked/commit-reveal seeding path for future tournaments.
-2. Persist per-move provider/model/version metadata and prompt commits at decision time.
-3. Design prompt commit/reveal or private review escrow plus public tournament eligibility/anti-spam controls.
+1. Scope/implement `IH-067` public tournament eligibility and anti-spam controls for broader credit-entry brackets.
+2. Design private prompt review escrow / prompt privacy verification without exposing raw private prompts.
+3. Add adversarial audit/replay tests around commit-reveal seeding, move provenance, and settlement edge cases.
 
 ## Blockers
 - None for the tournament prize-pool backend foundation.
