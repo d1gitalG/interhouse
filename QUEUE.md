@@ -9,6 +9,7 @@ _Last updated: 2026-05-14_
   - **Packet:** `IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
   - **DoD:** eligibility rule matrix, duplicate/spam entry prevention path, clear public fairness copy, tests for allowed/rejected entries, no audit/export regression.
   - **Gate:** no production deploy, real-stakes framing, or real-money/SOL language without Gianni approval.
+  - **Implemented 2026-07-02:** Codex-executed on branch ; lint/tsc/build pass; live eligibility smoke pending. See .
 
 - `IH-001` - `DONE` - Run the app locally and complete one end-to-end match test
   - **Done:** fresh local match `cmmiuq32p00005oiprz6slvnx` completed successfully; notes saved in `RUNTIME_TEST_2026-03-09.md`

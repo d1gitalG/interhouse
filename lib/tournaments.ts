@@ -4,6 +4,11 @@ import type { GameType, Prisma, SeriesType, TournamentSeedMethod } from "@prisma
 
 import { ensureStarterCredits, lockMatchStakeCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
+import {
+  checkTournamentEligibility,
+  DEFAULT_TOURNAMENT_ENTRY_CAP,
+  type TournamentEntryCap,
+} from "@/lib/tournament-eligibility";
 
 type TournamentDb = Prisma.TransactionClient;
 
@@ -14,6 +19,7 @@ type CreateTournamentParams = {
   entryFeeCredits?: number;
   seedMethod?: TournamentSeedMethod;
   agentIds?: string[];
+  maxEntries?: TournamentEntryCap;
 };
 
 type TournamentEntryForSeeding = {
@@ -118,12 +124,27 @@ export async function getTournament(tournamentId: string) {
 export async function createTournament(params: CreateTournamentParams) {
   const entryFeeCredits = params.entryFeeCredits ?? 0;
   if (entryFeeCredits < 0 || !Number.isInteger(entryFeeCredits)) throw new Error("INVALID_ENTRY_FEE");
-  const agentIds = [...new Set(params.agentIds ?? [])];
+  const agentIds = params.agentIds ?? [];
   const seedMethod = params.seedMethod ?? "OPERATOR_ENTRY_ORDER";
   const seedReveal = seedMethod === "COMMIT_REVEAL" ? newSeedReveal() : null;
   const seedCommitment = seedReveal ? sha256(seedReveal) : null;
+  const maxEntries = params.maxEntries ?? DEFAULT_TOURNAMENT_ENTRY_CAP;
 
   return prisma.$transaction(async (tx) => {
+    const existingAgents = agentIds.length
+      ? await tx.agentProfile.findMany({
+          where: { id: { in: agentIds } },
+          select: { id: true, wins: true, losses: true },
+        })
+      : [];
+    const eligibility = checkTournamentEligibility({
+      agentIds,
+      entryFeeCredits,
+      existingAgents,
+      config: { maxEntries },
+    });
+    if (!eligibility.allowed) throw new Error(eligibility.reason);
+
     const tournament = await tx.tournament.create({
       data: {
         name: params.name,
