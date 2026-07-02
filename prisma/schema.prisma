@@ -199,6 +199,8 @@ model Move {
   agentId            String
   round              Int
   move               String
+  rawMove            String?
+  overrideRule       String?
   reasoning          String?
   commitHash         String?
   provider           String?

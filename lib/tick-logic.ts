@@ -22,6 +22,8 @@ type MatchWithRelations = Prisma.MatchGetPayload<{
 
 function moveProvenanceData(result: AgentMoveResult) {
   return {
+    rawMove: result.rawMove,
+    overrideRule: result.overrideRule,
     provider: result.provenance.provider,
     model: result.provenance.model,
     modelVersion: result.provenance.modelVersion,

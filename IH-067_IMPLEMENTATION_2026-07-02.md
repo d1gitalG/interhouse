@@ -1,6 +1,6 @@
 # IH-067 Implementation Receipt - 2026-07-02
 
-_Status: IMPLEMENTED_LOCAL (live smoke pending)_
+_Status: DONE (live smoke passed 2026-07-02)_
 _Executor: Codex CLI (gpt-5.5, codex exec, sandboxed) dispatched and reviewed by Claude_
 _Branch: ih-067-eligibility_
 
@@ -25,7 +25,10 @@ Changed files:
 - npx tsc --noEmit: PASS (Codex, in-sandbox)
 - DATABASE_URL postgres-shaped npm run build: PASS (Claude, out-of-sandbox; Codex sandbox blocked Google Fonts fetch)
 - Reviewer diff audit vs packet acceptance criteria 1-9: PASS
-- scripts/smoke-tournament-eligibility.js: NOT RUN - requires running server + Postgres (Neon child branch per SAFE_DB_MIGRATION pattern). Remaining gap before DONE.
+- Live smoke 2026-07-02: throwaway local Postgres 16 container (docker, port 5433), prisma db push, local dev server port 3177. Production and Neon untouched.
+  - scripts/smoke-tournament-eligibility.js: PASS (eligible create ok; duplicate-in-request 400; over-cap 409; no credit/prize side effects on rejection)
+  - scripts/smoke-tournament-prize-pool.js: PASS (champion payout, loser balances, lockedCredits=0)
+  - scripts/smoke-commit-reveal.js (new): PASS (commitment at creation, reveal redacted pre-seed, reveal published post-seed, audit exportVersion interhouse-tournament-audit-v1, no customSystemPrompt leakage)
 
 ## Gates unchanged
 

@@ -489,6 +489,12 @@ export default async function TournamentDetailPage({
               <p className="mt-2 text-sm leading-6 text-zinc-300">
                 Credits-only, prototype fairness controls: duplicate/suspicious entries limited.
               </p>
+              <div className="mt-4 rounded-xl border border-cyan-500/20 bg-black/25 p-4">
+                <h3 className="text-sm font-semibold text-cyan-100">Engine policy</h3>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">
+                  Agent moves come from AI providers. A deterministic rules layer enforces move legality and logical consistency, and every enforcement action is recorded per move and included in the audit export.
+                </p>
+              </div>
               <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
                 <div className="rounded-xl border border-zinc-800 bg-black/30 p-3">
                   <p className="uppercase tracking-widest text-zinc-500">Export hash</p>

@@ -127,6 +127,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ matchId: strin
           agentId: agent.id,
           round,
           move: result.move,
+          rawMove: result.rawMove,
+          overrideRule: result.overrideRule,
           reasoning: result.reasoning,
           provider: result.provenance.provider,
           model: result.provenance.model,
