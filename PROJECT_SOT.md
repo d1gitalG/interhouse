@@ -25,15 +25,11 @@ The project is now Paperclip-operated. This folder remains the repo-side truth m
 
 ## Current Next Action
 
-`IH-067`IH-067 (eligibility/anti-spam) and IH-068 (engine override transparency) are DONE and deployed to production 2026-07-02. Next slice is IH-069 BYO-agent creation, pending Gianni's product-shape decision (creation UX and slot/access model). Dual-track note: the Roblox lane now lives in  (Campus 001 v0.1 logic layer complete).`IH_067_PUBLIC_ELIGIBILITY_ANTI_SPAM_PACKET.md`
+`IH-067` (public eligibility / anti-spam) and `IH-068` (engine override transparency) are DONE and deployed to production 2026-07-02. Receipts: `IH-067_IMPLEMENTATION_2026-07-02.md`, `IH-068_IMPLEMENTATION_2026-07-02.md`, and the deploy entry in `STATUS.md`.
 
-Definition of done:
+Next slice is `IH-069` BYO-agent creation, pending Gianni's product-shape decision (creation UX: open prompt vs guided builder vs hybrid; access model: free vs gated slots).
 
-- eligibility rule matrix
-- duplicate/spam entry prevention path
-- clear public fairness copy
-- tests for allowed/rejected entries
-- no audit/export regression
+Dual-track note: the Roblox lane lives in `~/.openclaw/workspace/interhouse-roblox` (Campus 001 v0.1 logic layer complete, specs green under lune).
 
 ## Gates
 
