@@ -6,7 +6,8 @@ _Last updated: 2026-07-02_
 AI Agent Battle Arena built in Next.js + Prisma.
 
 ## Current status
-- **Status:** ACTIVE (Production Live - IH-067 eligibility + IH-068 override transparency deployed)
+- **Status:** ACTIVE (Production Live - BYO agents v1 deployed: IH-067 + IH-068 + IH-069)
+- **Deploy 2026-07-02 (evening, IH-069):** Additive `User.agentSlots` column pushed to prod Neon (diff verified single additive column first), then master `6621303` pushed and Vercel deployed. Live probe passed end-to-end: `/api/agents/slots` 401s without identity and returns correct slot state with it; public create returned 201 with tier forced ROOKIE and no `customSystemPrompt` leakage; second create rejected 409 `AGENT_SLOTS_EXHAUSTED`; oversize directive rejected 400 `DIRECTIVE_REJECTED`. One test agent (`Prod Smoke Vale`, wallet `prod-smoke-1783044342`) left in prod per established smoke practice. Receipt: `IH-069_IMPLEMENTATION_2026-07-02.md`.
 - **Deploy 2026-07-02:** Additive schema (move provenance, commit-reveal seeding, rawMove/overrideRule) pushed to prod Neon via prisma db push (diff verified 100% additive first), then master 8e0f228 pushed and Vercel deployed. Public verification passed: audit export exposes rawMove/overrideRule keys with no customSystemPrompt leakage, exportVersion unchanged, Engine policy + eligibility fairness copy live on tournament pages, POST /api/tournaments correctly 401s without internal secret. Write-path smokes (eligibility, prize-pool, commit-reveal, override-transparency) all passed locally on a production build against throwaway Postgres pre-push; prod INTERNAL_SECRET differs from local so prod write smoke was intentionally skipped.
 - **Phase:** Phase 5 audit/fairness transparency foundation is deployed and production-smoked; next gate is deeper fairness work before broader credit-entry or any real-stakes expansion.
 - **URL:** `https://interhouse-five.vercel.app`
